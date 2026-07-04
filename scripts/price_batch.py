@@ -41,12 +41,24 @@ SNAPSHOTS_DIR = REPO_ROOT / "ingredients" / "snapshots"
 QUANTITY_RE = re.compile(r"^([\d.]+(?:/[\d.]+)?)\s*(.*)$")
 
 
+POUND_UNIT_RE = re.compile(r"^(lbs?|#|pounds?)$", re.IGNORECASE)
+
+
+def normalize_unit(unit: str) -> str:
+    """IMCO's option labels aren't consistent about how they spell "pounds"
+    across products (seen live: "lb", "lbs", "LBS", "#") — collapse any of
+    those to "lb" so the sheet doesn't reintroduce the inconsistency this
+    refactor removed. Leaves anything else (e.g. a genuine non-lb unit)
+    untouched."""
+    return "lb" if POUND_UNIT_RE.match(unit.strip()) else unit
+
+
 def parse_quantity(label: str) -> tuple[float, str]:
     match = QUANTITY_RE.match(label.strip())
     if not match:
         raise ValueError(f"can't parse quantity from {label!r}")
     num_str, unit = match.groups()
-    unit = re.sub(r"\(.*\)", "", unit).strip()
+    unit = normalize_unit(re.sub(r"\(.*\)", "", unit).strip())
     if "/" in num_str:
         numerator, denominator = num_str.split("/")
         value = float(numerator) / float(denominator)
@@ -90,6 +102,28 @@ def is_stale(price_row: dict) -> bool:
     return (date.today() - date.fromisoformat(last_verified)).days > STALENESS_DAYS
 
 
+# Standard tier columns tracked in ingredient_prices.csv. Per
+# .claude/rules/conventions.md: sub-1lb tiers aren't tracked (recipes here
+# are always priced in whole-lb-and-up quantities), and a tier whose real
+# quantity doesn't land on one of these exactly (e.g. a 25kg/55.14lb bag)
+# gets bucketed into the closest standard column.
+STANDARD_TIER_LBS = [1, 5, 10, 25, 50, 100]
+
+
+def bucket_tiers(parsed: list[tuple[float, str, float]]) -> dict[int, tuple[float, float]]:
+    """Map (qty, unit, price) tiers onto the closest standard column.
+
+    Returns {bucket_lb: (price, actual_qty)}, keeping only the closest tier
+    per bucket if more than one maps to it.
+    """
+    buckets: dict[int, tuple[float, float]] = {}
+    for qty, _unit, price in parsed:
+        bucket = min(STANDARD_TIER_LBS, key=lambda b: abs(b - qty))
+        if bucket not in buckets or abs(qty - bucket) < abs(buckets[bucket][1] - bucket):
+            buckets[bucket] = (price, qty)
+    return buckets
+
+
 def refresh_price_row(price_row: dict) -> None:
     result = subprocess.run(
         ["uv", "run", "--with", "playwright", "scripts/scrape_imco_price.py", price_row["imco_url"]],
@@ -107,6 +141,8 @@ def refresh_price_row(price_row: dict) -> None:
         if tier["price"] is None:
             continue
         qty, unit = parse_quantity(tier["label"])
+        if qty < 1:
+            continue  # sub-1lb tiers aren't tracked, see STANDARD_TIER_LBS comment
         parsed.append((qty, unit, parse_price(tier["price"])))
     if not parsed:
         print(f"  refresh returned no usable tiers for {price_row['material_name']}", file=sys.stderr)
@@ -120,6 +156,21 @@ def refresh_price_row(price_row: dict) -> None:
     price_row["bulk_price"] = f"{cheapest_per_unit[2]:.2f}"
     price_row["bulk_unit"] = f"{cheapest_per_unit[0]:g} {cheapest_per_unit[1]}"
     price_row["last_verified"] = date.today().isoformat()
+
+    buckets = bucket_tiers(parsed)
+    for bucket in STANDARD_TIER_LBS:
+        column = f"price_{bucket}lb"
+        if bucket in buckets:
+            price, actual_qty = buckets[bucket]
+            price_row[column] = f"{price:.2f}"
+            if abs(actual_qty - bucket) > 0.01:
+                print(
+                    f"  {price_row['material_name']}: bucketed {actual_qty:g} lb tier into "
+                    f"{column} (approximation) -- update notes if this needs disclosing",
+                    file=sys.stderr,
+                )
+        else:
+            price_row[column] = ""
 
 
 def log_candidates(recipe_glazy_url: str, material_name: str) -> None:

@@ -198,6 +198,12 @@ Replaced the interactive-agent pattern used in Runs 1–3 with three Playwright-
 - Glazy has no literal "alternate names" section on a material page — the equivalent is **"Child materials"** (manufacturer-specific product-name variants, e.g. Wollastonite's page lists "Vansil W-30 Wollastonite," "Imerys Wollastonite NYAD M325," etc.), rendered as one comma-separated line rather than one name per line. `find_material_candidates.py` matches on "child materials?" alongside "alternate names/synonyms" in case a future material page uses different wording.
 - IMCO's search does **not** return zero results for a query with no real match — it falls back to an unrelated "trending products" set (confirmed: 9 unrelated hits, same clay-body bag, for every one of 18 brand-specific child-material names tried for Wollastonite). Raw hit count is therefore not a usable relevance signal on its own; `find_material_candidates.py` only counts a hit if the result URL shares a significant word with the search term. Tested end-to-end against Wollastonite (deliberately marked `not_found`): 18 of 19 terms correctly came back "not found," and the 1 real term ("Wollastonite" itself) correctly surfaced SKU 747 — the same material already confirmed by hand in Run 1.
 
+## Run 5 (2026-07-04) — ingredient_prices.csv tier columns
+
+Refactored `ingredients/ingredient_prices.csv` to add six standard per-quantity columns (`price_1lb, price_5lb, price_10lb, price_25lb, price_50lb, price_100lb`), replacing the "full tier pricing: 1 lb $X, 5 lb $Y, ..." prose that had been duplicated in every row's `notes`. See "Ingredient price tiers" in `.claude/rules/conventions.md` for the two conventions this follows (sub-1lb tiers dropped, non-standard pack sizes bucketed to the closest column) and `scripts/price_batch.py`'s `bucket_tiers()` for the implementation.
+
+Verified live against Potash Feldspar (the kg-bag case) and Copper Carbonate (the sub-1lb case) by forcing a refresh of both: bucketing worked as designed (55.14 lb → `price_50lb`, with a stderr warning since it's an approximation) and the 1/4 lb and 1/2 lb tiers were correctly dropped from tracking. Also caught a new inconsistency in the process: IMCO's option-label unit text isn't consistent across products (`"lb"`, `"lbs"`, `"LBS"`, `"#"` all seen live) — `price_batch.py` now normalizes any of these to `"lb"` on write-back so the sheet doesn't quietly reintroduce unit-text drift.
+
 ## Source Files Referenced
 
 - Glazy recipe page: https://glazy.org/recipes/292795  
