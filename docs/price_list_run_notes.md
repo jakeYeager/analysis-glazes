@@ -158,7 +158,7 @@ Do not fabricate a price. Leave `price`, `unit`, `bulk_price`, and `bulk_unit` e
 
 ## Run 2 (2026-07-04) — "Giggin' for Salvation" materials + Frit 3134/Gerstley comparison
 
-Triggered by a real business question (see `frit3134_vs_gerstley_borate_cost_comparison.md`): the studio glaze tech's derivative recipe "Giggin' for Salvation" needed three materials not yet in `ingredient_prices.csv`. This run used the JS weight-tier extraction technique (see above) on every product from the start, so all three came back with full tier pricing, not just a min–max range:
+Triggered by a real business question (see `reports/frit3134_vs_gerstley_borate_cost_comparison.md`): the studio glaze tech's derivative recipe "Giggin' for Salvation" needed three materials not yet in `ingredients/ingredient_prices.csv`. This run used the JS weight-tier extraction technique (see above) on every product from the start, so all three came back with full tier pricing, not just a min–max range:
 
 | Material | IMCO match | Match confidence | Full tier pricing (1/5/10/25/50 lb) |
 |---|---|---|---|
@@ -174,7 +174,7 @@ Also went back and pulled full tier pricing for Gerstley Borate (724), previousl
 
 ## Run 3 (2026-07-04) — full-recipe pricing for every remaining ingredient
 
-Triggered by a request to compare Giggin' for Salvation and Frogskin at the full-recipe level (not just the flux), since a single-ingredient swing can be a false positive if other ingredients move the other way. Pulled full tier pricing (same JS technique) for every remaining material in both recipes: Nepheline Syenite, Potash Feldspar, Copper Carbonate, EP Kaolin, Red Iron Oxide, Wollastonite, Titanium Dioxide. All now have real per-lb bulk rates in `ingredient_prices.csv` instead of "various."
+Triggered by a request to compare Giggin' for Salvation and Frogskin at the full-recipe level (not just the flux), since a single-ingredient swing can be a false positive if other ingredients move the other way. Pulled full tier pricing (same JS technique) for every remaining material in both recipes: Nepheline Syenite, Potash Feldspar, Copper Carbonate, EP Kaolin, Red Iron Oxide, Wollastonite, Titanium Dioxide. All now have real per-lb bulk rates in `ingredients/ingredient_prices.csv` instead of "various."
 
 **Notable findings from this pass:**
 - **EP Kaolin is out of stock in every size** (1/5/10/25/50 lb all show "Out of stock" on IMCO). Prices are last-listed, not currently purchasable. This affects both recipes and is arguably a bigger near-term problem than the flux cost question.  
