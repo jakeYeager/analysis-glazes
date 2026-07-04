@@ -185,6 +185,19 @@ Triggered by a request to compare Giggin' for Salvation and Frogskin at the full
 
 With full pricing in hand, total per-batch cost came out to $242.71 (107 lb) for Frogskin with Gerstley Borate and $261.94 (115.5 lb) for Giggin' for Salvation — both landing at the same $2.27/lb once every ingredient is counted, despite Frit 3134 being $1.80/lb cheaper than Gerstley Borate. See `frit3134_vs_gerstley_borate_cost_comparison.md` for the full breakdown.
 
+## Run 4 (2026-07-04) — workflow automated
+
+Replaced the interactive-agent pattern used in Runs 1–3 with three Playwright-Python scripts (`scripts/scrape_imco_price.py`, `scripts/find_material_candidates.py`, `scripts/price_batch.py` — see `CLAUDE.md` "Automated pricing workflow" for the CLI and division of responsibilities). `ingredient_prices.csv` gained `last_verified` and `glazy_material_url` columns; a `YYYY-MM-DD-ingredient_prices.csv` snapshot convention now lives in `ingredients/snapshots/`, addressing both open items from the original run notes. Full technique details (tier-table JS loop, non-monotonic bulk pricing, SPA rendering requirement) aren't repeated here — they're implemented directly in the scripts now rather than needing to be re-read by a future agent before each run.
+
+**Verified live and fixed during this run:**
+
+- `wait_until="networkidle"` hangs indefinitely on IMCO product/search pages — something on the page keeps a background connection open, so the page never reaches "idle" even though it visibly finishes loading in under a second. Switched both scripts to `wait_until="load"` plus a fixed ~1s wait.
+- IMCO's weight-tier `<select>` includes a disabled `"Select one"` placeholder option (`value=""`) as its first entry; `scrape_imco_price.py` now filters out disabled/empty options before looping, since selecting a disabled option hangs Playwright's `select_option`.
+- Confirmed live against Silica (SKU 728): tier pricing came back exactly as documented in Run 1 (1/5/10/25/50 lb → $2.50/$5.00/$9.00/$25.75/$25.00, 50 lb cheaper than 25 lb).
+- **Found and fixed a real data bug while testing:** Silica's `bulk_price`/`bulk_unit` columns pointed at the 25 lb tier ($25.75) even though the row's own `notes` field already said the 50 lb tier ($25.00) was the actual bulk discount — a pre-existing inconsistency from the original CSV, not introduced by this run. The frit3134/Gerstley report happened to get the right number anyway because it was computed by hand off the notes text rather than the bulk columns. Corrected to $25.00/50 lb.
+- Glazy has no literal "alternate names" section on a material page — the equivalent is **"Child materials"** (manufacturer-specific product-name variants, e.g. Wollastonite's page lists "Vansil W-30 Wollastonite," "Imerys Wollastonite NYAD M325," etc.), rendered as one comma-separated line rather than one name per line. `find_material_candidates.py` matches on "child materials?" alongside "alternate names/synonyms" in case a future material page uses different wording.
+- IMCO's search does **not** return zero results for a query with no real match — it falls back to an unrelated "trending products" set (confirmed: 9 unrelated hits, same clay-body bag, for every one of 18 brand-specific child-material names tried for Wollastonite). Raw hit count is therefore not a usable relevance signal on its own; `find_material_candidates.py` only counts a hit if the result URL shares a significant word with the search term. Tested end-to-end against Wollastonite (deliberately marked `not_found`): 18 of 19 terms correctly came back "not found," and the 1 real term ("Wollastonite" itself) correctly surfaced SKU 747 — the same material already confirmed by hand in Run 1.
+
 ## Source Files Referenced
 
 - Glazy recipe page: https://glazy.org/recipes/292795  
