@@ -190,5 +190,5 @@ With full pricing in hand, total per-batch cost came out to $242.71 (107 lb) for
 - Glazy recipe page: https://glazy.org/recipes/292795  
 - IMCO home page: https://www.clayimco.com/  
 - IMCO search queries (per-ingredient): see CSV `imco_url` column for direct search/product links.  
-- `recipes.csv` — ingredient lists for Frogskin and "Giggin' for Salvation."  
+- `recipes/compare_recipes.csv` — ingredient lists for Frogskin and "Giggin' for Salvation."  
 - `frit3134_vs_gerstley_borate_cost_comparison.md` — the cost comparison this run's data fed into.  

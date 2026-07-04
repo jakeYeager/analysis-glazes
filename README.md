@@ -7,7 +7,7 @@ Cost analysis for a ceramics studio's glaze recipes and raw-material pricing. St
 - `recipes/` — logged ingredient lists (material + amount by weight) for each glaze recipe tracked so far.
 - `ingredients/` — verified per-lb bulk pricing for each raw material, pulled from the supplier's live site (not estimated).
 - `docs/price_list_run_notes.md` — first-pass methodology log: what was verified, how, what went wrong along the way, and a running checklist for future price-collection passes.
-- `reports/` (+ `/pdf/`) — report deliverables like full per-batch cost comparison between two recipes.
+- `reports/` (+ `/pdfs/`) — report deliverables like full per-batch cost comparison between two recipes.
 - `scripts/` — utilitiy scripts like regenerate a shareable PDF from any Markdown report here.
 
 ## Source systems

@@ -4,8 +4,8 @@
 # Usage:
 #   scripts/md2pdf.sh path/to/report.md [more.md ...]
 #
-# Each .pdf is written alongside its source .md (same name, .pdf extension),
-# overwriting any existing one. Pipeline: pandoc (via `uv`, ephemeral, same
+# Each .pdf is written into a pdfs/ subfolder next to its source .md (same
+# name, .pdf extension), overwriting any existing one. Pipeline: pandoc (via `uv`, ephemeral, same
 # approach as md2docx.sh — nothing installed permanently) renders Markdown
 # to a styled standalone HTML file, then headless Google Chrome prints that
 # HTML to PDF. Requires Google Chrome.app to already be installed locally;
@@ -49,7 +49,9 @@ for src in "$@"; do
     continue
   fi
   html="$WORKDIR/$(basename "${src%.md}").html"
-  pdf="${src%.md}.pdf"
+  pdfdir="$(dirname "$src")/pdfs"
+  mkdir -p "$pdfdir"
+  pdf="$pdfdir/$(basename "${src%.md}").pdf"
 
   uv run --with pypandoc-binary python - "$src" "$html" "$CSS" <<'PY'
 import sys

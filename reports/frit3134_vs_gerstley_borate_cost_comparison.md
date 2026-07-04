@@ -1,6 +1,6 @@
 # Frit 3134 vs. Gerstley Borate — Flux Cost Comparison
 
-The studio's glaze tech traced Frogskin's glaze-fit problem ("running") to a flux substitution: the studio had been using Frit 3134 in place of the original recipe's Gerstley Borate, and a test batch mixed with real Gerstley Borate came out stable. Frogskin is a member favorite, and the glaze tech is getting pushback from members about it — this doc exists so the studio has real numbers to push back with (or concede to) rather than going on vibes, using real IMCO bulk pricing. It prices the Gerstley-Borate switch on its own, applies it to the glaze tech's new derivative recipe ("Giggin' for Salvation"), to Frogskin's own real-world bag economics, and — since a single-ingredient price swing can be a false positive if the rest of a recipe is cheap or expensive in the other direction — to the full per-batch cost of both recipes, ingredient by ingredient. Source recipes are logged in `recipes.csv`; source prices in `ingredient_prices.csv`.
+The studio's glaze tech traced Frogskin's glaze-fit problem ("running") to a flux substitution: the studio had been using Frit 3134 in place of the original recipe's Gerstley Borate, and a test batch mixed with real Gerstley Borate came out stable. Frogskin is a member favorite, and the glaze tech is getting pushback from members about it — this doc exists so the studio has real numbers to push back with (or concede to) rather than going on vibes, using real IMCO bulk pricing. It prices the Gerstley-Borate switch on its own, applies it to the glaze tech's new derivative recipe ("Giggin' for Salvation"), to Frogskin's own real-world bag economics, and — since a single-ingredient price swing can be a false positive if the rest of a recipe is cheap or expensive in the other direction — to the full per-batch cost of both recipes, ingredient by ingredient. Source recipes are logged in `recipes/compare_recipes.csv`; source prices in `ingredients/ingredient_prices.csv`.
 
 **Naming note:** an internal chat thread (2026-07-04) refers to the substitute flux as "Gillespie Borate." No material by that name exists on Glazy or IMCO. "Giggin' for Salvation" (the glaze tech's recipe, same thread) lists "Ferro Frit 3134" in the role Frogskin's published formula gives to Gerstley Borate, and the glaze tech's own cost figures ("Frit 3134 is $135 for #50") match IMCO's Frit 3134 bulk price exactly. This doc treats "Gillespie Borate" as that thread's name for **Frit 3134** — flag if that's wrong.
 
@@ -95,8 +95,8 @@ This is the more grounded number, since it needs no assumption about batch size.
 
 ## Source files referenced
 
-- `recipes.csv` — Frogskin and "Giggin' for Salvation" ingredient lists  
-- `ingredient_prices.csv` — verified IMCO pricing for all materials in both recipes  
-- `price_list_run_notes.md` — pricing methodology and verification history  
+- `recipes/compare_recipes.csv` — Frogskin and "Giggin' for Salvation" ingredient lists  
+- `ingredients/ingredient_prices.csv` — verified IMCO pricing for all materials in both recipes  
+- `docs/price_list_run_notes.md` — pricing methodology and verification history  
 - Glazy recipe: <https://glazy.org/recipes/292795> (Frogskin)  
 - Internal chat thread, 2026-07-04 (studio glaze tech / Jake), screenshot only — not machine-readable, transcribed into `recipes.csv`  
