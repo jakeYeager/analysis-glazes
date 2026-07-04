@@ -1,4 +1,3 @@
-# Verified 2026-07-04 via claude-in-chrome real browser automation against glazy.org and clayimco.com (Square Online store). See price_list_run_notes.md for methodology and per-material notes.
 material_name,price,unit,bulk_price,bulk_unit,imco_url,match_confidence,notes
 Silica,2.50,1 lb,25.75,25 lb,https://www.clayimco.com/product/728-200-mesh-silica/52,exact,"728 - 200 Mesh Silica (Sil-Co-Sil 90); full tier pricing: 1 lb $2.50, 5 lb $5.00, 10 lb $9.00, 25 lb $25.75, 50 lb $25.00 (50 lb is a bulk discount vs 25 lb)"
 Gerstley Borate,6.00,1 lb,225.00,50 lb bag,https://www.clayimco.com/product/724-gerstley-borate/51,exact,"724 - Gerstley Borate; full tier pricing: 1 lb $6.00, 5 lb $30.00, 10 lb $55.00, 25 lb $150.00, 50 lb bag $225.00 -- matches the glaze tech's 2026-07-04 quote of $225/bag exactly"
