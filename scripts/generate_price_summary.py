@@ -135,15 +135,27 @@ def render_table(rows: list[dict]) -> str:
             note_parts.append(f"{len(r['unresolved'])} ingredient(s) unpriced -- total may be understated")
         notes_text = r["recipe_notes"] or ""
         if notes_text.startswith(STAKEHOLDER_NOTE_PREFIX):
-            note_parts.append("see notes (db/glazes.db) -- affects how to read this $/lb figure")
+            note_parts.append("see Recipe Notes below -- affects how to read this $/lb figure")
         if notes_text.startswith(REFERENCE_ONLY_PREFIX):
-            note_parts.append("reference only -- not in active rotation")
+            note_parts.append("reference only -- not in active rotation, see Recipe Notes below")
         notes = "; ".join(note_parts)
         lines.append(
             f"| {r['recipe']} | {price} | {r['total_weight']:.2f} | ${r['total_cost']:.2f} | "
             f"{r['oldest_priced'] or '—'} | {notes} |"
         )
     return "\n".join(lines)
+
+
+def render_recipe_notes(rows: list[dict]) -> str:
+    flagged = [
+        r for r in rows
+        if (r["recipe_notes"] or "").startswith(STAKEHOLDER_NOTE_PREFIX)
+        or (r["recipe_notes"] or "").startswith(REFERENCE_ONLY_PREFIX)
+    ]
+    if not flagged:
+        return ""
+    entries = [f"**{r['recipe']}** — {r['recipe_notes']}" for r in sorted(flagged, key=lambda r: r["recipe"])]
+    return "## Recipe Notes\n\nFull text of every note flagged \"see Recipe Notes below\" in the tables above.\n\n" + "\n\n".join(entries)
 
 
 def write_report(summaries: list[dict]) -> None:
@@ -156,6 +168,10 @@ def write_report(summaries: list[dict]) -> None:
         heading = firing_type.replace("-", " ").title()
         sections.append(f"## {heading} glazes\n\n{render_table(group)}")
 
+    recipe_notes_section = render_recipe_notes(summaries)
+    if recipe_notes_section:
+        sections.append(recipe_notes_section)
+
     body = f"""# Glaze Price Summary
 
 | | |
@@ -166,7 +182,7 @@ def write_report(summaries: list[dict]) -> None:
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
-This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. Base-glaze materials (frits, feldspars, clays, silica) are costed at the cheapest bulk rate, since that's realistically how they're bought; colorants, opacifiers, and Lithium Carbonate are costed at a smaller 10lb rate instead, since those are typically bought in much smaller quantities than a full bag. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
+This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. Base-glaze materials (frits, feldspars, clays, silica) are costed at the cheapest bulk rate, since that's realistically how they're bought; colorants, opacifiers, and Lithium Carbonate are costed at a smaller 10lb rate instead, since those are typically bought in much smaller quantities than a full bag. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see Recipe Notes below" has a specific caveat about this worth reading before comparing it to others on `$/lb` alone — full text of each is in the "Recipe Notes" section below the price tables.
 
 {(chr(10) * 2).join(sections)}
 
