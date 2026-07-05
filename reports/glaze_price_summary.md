@@ -21,7 +21,7 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 
 | Glaze | $/lb | Batch Weight (lb) | Total Cost | Last Priced | Notes |
 |---|---|---|---|---|---|
-| Ballingham Black Luster | $4.70 | 133.50 | $627.07 | 2026-07-04 | 1 ingredient(s) unpriced -- total may be understated |
+| Ballingham Black Luster | $5.24 | 133.50 | $700.07 | 2026-07-04 |  |
 | Bill's Neon Blue 2024 | $4.53 | 109.00 | $493.97 | 2026-07-04 |  |
 | Blue Moon | $7.03 | 102.00 | $717.27 | 2026-07-04 |  |
 | Clear Crackle | $3.73 | 100.00 | $372.80 | 2026-07-04 |  |
