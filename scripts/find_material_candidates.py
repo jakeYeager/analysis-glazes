@@ -5,12 +5,12 @@ alternate-name list.
 Usage:
     uv run --with playwright scripts/find_material_candidates.py <recipe_glazy_url> "<material name>"
 
-For a material whose ingredient_prices.csv row is `fuzzy` or `not_found`, this
-finds that material's Glazy detail page (by following the link matching
-<material name> on the recipe page), scrapes its listed alternate/synonym
-names, and tries each one against IMCO's search. Results are *candidates
-only* — appended to ingredients/name_candidates_log.csv for manual review.
-This script never writes to ingredient_prices.csv itself: per this project's
+For a material whose materials row is `fuzzy` or `not_found`, this finds that
+material's Glazy detail page (by following the link matching <material name>
+on the recipe page), scrapes its listed alternate/synonym names, and tries
+each one against IMCO's search. Results are *candidates only* — inserted
+into db/glazes.db's name_candidates_log table for manual review. This
+script never writes to the materials table itself: per this project's
 "never fabricate a price" rule, a human confirms any fuzzy match before it
 becomes real data.
 
@@ -21,10 +21,14 @@ names for that generic material, rendered as one comma-separated line.
 IMCO's search also doesn't return zero results for a bad query; it falls
 back to unrelated "trending" products, so raw hit count alone isn't a
 relevance signal — see the token-overlap filter in search_imco().
+
+Also tries the material name with a known manufacturer prefix stripped
+(e.g. "Ferro Frit 3134" -> "Frit 3134") as an extra search term, since
+IMCO's own catalog often drops it — see KNOWN_MANUFACTURER_PREFIXES.
 """
 
-import csv
 import re
+import sqlite3
 import sys
 from datetime import date
 from pathlib import Path
@@ -33,17 +37,21 @@ from urllib.parse import quote
 from playwright.sync_api import sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-LOG_PATH = REPO_ROOT / "ingredients" / "name_candidates_log.csv"
-LOG_HEADER = [
-    "material_name",
-    "glazy_material_url",
-    "alt_names_tried",
-    "imco_search_term",
-    "imco_hits",
-    "suggested_sku",
-    "suggested_confidence",
-    "checked_date",
-]
+DB_PATH = REPO_ROOT / "db" / "glazes.db"
+
+# Manufacturer prefixes suppliers/Glazy are inconsistent about including —
+# keep in sync with the same list in import_glazy_recipe.py and
+# .claude/rules/conventions.md "Material name variants" (the source of
+# truth for why this list exists and what's confirmed so far).
+KNOWN_MANUFACTURER_PREFIXES = ["Ferro"]
+
+
+def strip_known_prefix(name: str) -> str | None:
+    for prefix in KNOWN_MANUFACTURER_PREFIXES:
+        if name.startswith(prefix + " "):
+            return name[len(prefix) + 1 :]
+    return None
+
 
 ALT_NAME_HEADING_RE = re.compile(
     r"alternate names?|also known as|synonyms?|child materials?", re.IGNORECASE
@@ -125,6 +133,8 @@ def main() -> None:
     if len(sys.argv) != 3:
         print(f"Usage: {sys.argv[0]} <recipe_glazy_url> \"<material name>\"", file=sys.stderr)
         sys.exit(1)
+    if not DB_PATH.exists():
+        raise SystemExit(f"{DB_PATH} doesn't exist -- run scripts/db_build.py first")
 
     recipe_url, material_name = sys.argv[1], sys.argv[2]
     today = date.today().isoformat()
@@ -142,7 +152,8 @@ def main() -> None:
             browser.close()
             sys.exit(1)
 
-        terms_to_try = [material_name] + alt_names
+        stripped = strip_known_prefix(material_name)
+        terms_to_try = [material_name] + ([stripped] if stripped else []) + alt_names
         for term in terms_to_try:
             matches = search_imco(page, term)
             rows.append(
@@ -160,20 +171,24 @@ def main() -> None:
 
         browser.close()
 
-    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
-    write_header = not LOG_PATH.exists() or LOG_PATH.stat().st_size == 0
-    with open(LOG_PATH, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=LOG_HEADER)
-        if write_header:
-            writer.writeheader()
-        writer.writerows(rows)
+    conn = sqlite3.connect(DB_PATH)
+    conn.executemany(
+        "INSERT INTO name_candidates_log "
+        "(material_name, glazy_material_url, alt_names_tried, imco_search_term, "
+        "imco_hits, suggested_sku, suggested_confidence, checked_date) "
+        "VALUES (:material_name, :glazy_material_url, :alt_names_tried, :imco_search_term, "
+        ":imco_hits, :suggested_sku, :suggested_confidence, :checked_date)",
+        rows,
+    )
+    conn.commit()
+    conn.close()
 
     for row in rows:
         print(
             f"{row['imco_search_term']!r}: {row['imco_hits']} hit(s), "
             f"suggested {row['suggested_confidence']} -> {row['suggested_sku'] or '(none)'}"
         )
-    print(f"logged {len(rows)} candidate row(s) to {LOG_PATH}")
+    print(f"logged {len(rows)} candidate row(s) to {DB_PATH}")
 
 
 if __name__ == "__main__":

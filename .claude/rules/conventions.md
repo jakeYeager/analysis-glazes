@@ -1,11 +1,44 @@
 # Conventions
 
+## Firing type
+
+`recipes.firing_type` (in `db/glazes.db`, exported to
+`recipes/recipe_metadata.csv`) is either `mid-fire` or `raku`. Glazy's
+"Atmospheres" field states it directly (e.g. `"Raku, Reduction"`) — confirmed
+live and auto-detected by `scripts/import_glazy_recipe.py`. Fall back to cone
+only if Atmospheres doesn't mention it: cone 04-08 (low-fire) is raku
+territory in this studio's practice, cone 04 and hotter (up to ~6) is
+mid-fire. When in doubt, ask rather than guess — the two firing types aren't
+cost-interchangeable (raku glazes are typically simpler, fewer/cheaper
+materials) and mixing them in a report without the tag defeats the point of
+tracking it.
+
+## Material name variants
+
+Different sources name the same material differently — this project has
+hit it repeatedly (Potash/Potassium Feldspar, EP Kaolin/EPK, and now
+manufacturer prefixes). One confirmed class: **manufacturer prefixes on
+frits.** "Ferro Frit NNNN" and "Frit NNNN" are the same product — Ferro's
+proprietary frit numbering (3124, 3134, etc.) became the de facto industry
+reference number, and ceramic suppliers vary on whether they include the
+manufacturer name. Confirmed via web search 2026-07-04 across multiple
+independent ceramic-supply sources for Frit 3134 specifically. `Ferro` is
+tracked in `KNOWN_MANUFACTURER_PREFIXES` in both `scripts/import_glazy_recipe.py`
+(so a new recipe reuses the existing priced material instead of creating a
+duplicate `not_found` row) and `scripts/find_material_candidates.py` (so the
+stripped name gets tried as an IMCO search term too). Extend that list —
+in both files — if another manufacturer prefix causes the same problem.
+
+This is a *confirmed* class of name variant, not a guess — still mark the
+resulting match `fuzzy` rather than `exact` (per the never-fabricate rule),
+since it's inferred equivalence, not a literal string match.
+
 ## Ingredient price tiers
 
-`ingredients/ingredient_prices.csv` tracks per-quantity IMCO pricing in six
-standard columns: `price_1lb, price_5lb, price_10lb, price_25lb, price_50lb,
-price_100lb`. Two simplifying rules apply when scraped data doesn't line up
-with these buckets exactly:
+`materials` (in `db/glazes.db`, exported to `ingredients/ingredient_prices.csv`)
+tracks per-quantity IMCO pricing in six standard columns: `price_1lb,
+price_5lb, price_10lb, price_25lb, price_50lb, price_100lb`. Two simplifying
+rules apply when scraped data doesn't line up with these buckets exactly:
 
 - **Sub-1 lb tiers are dropped.** Some materials (e.g. colorants like Copper
   Carbonate) also sell in 1/4 lb or 1/2 lb minimums below their 1 lb tier.
