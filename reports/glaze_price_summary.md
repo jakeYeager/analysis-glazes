@@ -35,7 +35,6 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 | Kelly's Lo-Fire Shino | $6.69 | 106.34 | $710.90 | 2026-07-04 | reference only -- not in active rotation |
 | Looks Expensive | $4.63 | 106.30 | $492.57 | 2026-07-04 |  |
 | Marble White Crackle | $4.72 | 110.00 | $519.20 | 2026-07-04 |  |
-| Metallic Turquoise | $4.34 | 108.00 | $468.80 | 2026-07-04 |  |
 | Post Pac Man | $5.02 | 114.70 | $575.75 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
 | Reynolds Wrap | $4.08 | 114.00 | $465.26 | 2026-07-04 |  |
 | Sky Blue Crackle | $3.85 | 100.50 | $386.80 | 2026-07-04 |  |
