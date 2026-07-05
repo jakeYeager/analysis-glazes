@@ -18,3 +18,4 @@ Bill's Neon Blue 2024,,raku,,,,2026-07-04,"Bulk-imported from a personal spreads
 Blue Moon,,raku,,,,2026-07-04,"Bulk-imported from a personal spreadsheet, not yet on Glazy -- is_addition defaulted to false for every ingredient since this source has no base/addition marker. Re-run import_glazy_recipe.py <url> --force once this recipe is added to Glazy to pick up the real base/addition split."
 Kelly's Lo-Fire Shino,,raku,,,,2026-07-04,"Bulk-imported from a personal spreadsheet, not yet on Glazy -- is_addition defaulted to false for every ingredient since this source has no base/addition marker. Re-run import_glazy_recipe.py <url> --force once this recipe is added to Glazy to pick up the real base/addition split."
 Copper Sand,https://glazy.org/recipes/561485,raku,△05-04,"Reduction, Raku",Production,2026-07-04,
+Hasselle Copper Matte,https://glazy.org/recipes/562340,raku,△08-04,"Raku, Reduction",Production,2026-07-04,
