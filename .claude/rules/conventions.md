@@ -75,6 +75,8 @@ approximated so you can decide whether the row's `notes` needs updating.
 
 An accepted convention in writing glaze recipes is parts by weight normalized to 100-part. This 100-part is known as the "base glaze". 100-part is sometimes approximate (slight variations are not always calculation errors). Colorants & opacifiers are ingredients added (sometimes labled "add") on top of a 100-part base (base glaze ingredients).
 
+**"To taste" application ingredients aren't chemistry — don't treat their amount as a data-quality signal.** CMC Gum (confirmed by Jake, 2026-07-04) is added purely to improve brushability/application, not for its fired chemistry, so its quantity is routinely adjusted batch to batch and isn't governed by the same precision as fluxes, colorants, or opacifiers. When a source disagrees with Glazy (or another source) on a CMC Gum amount, that's expected variance, not a transcription error worth flagging the way a flux or colorant discrepancy would be. Bentonite (a suspension aid, also often added "to taste") is plausibly similar, but that hasn't been explicitly confirmed the way CMC Gum has — don't assume it without asking.
+
 ## New reports
 
 After the title, make a short framing paragraph explaining why the doc exists, tables over prose for numbers, and a "Source files referenced" list at the bottom.
