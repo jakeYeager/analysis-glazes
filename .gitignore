@@ -1,5 +1,5 @@
 .DS_Store
 db/*.db
-reports/pdfs/
+reports/pdfs/*.pdf
 _inbox/
 __pycache__/
