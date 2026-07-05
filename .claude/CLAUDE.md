@@ -58,6 +58,15 @@ For each ingredient: uses the cached price if `last_verified` is within `STALENE
    Leave `last_verified` unset — the next `price_batch.py` run treats the row as "confirmed but stale" and auto-refreshes it through the normal `scrape_imco_price.py` path. No separate pricing step needed.
 4. Re-run `price_batch.py` for any recipe using that material to confirm it now prices correctly.
 
+### Generate the stakeholder price summary
+
+```
+python3 scripts/generate_price_summary.py
+scripts/md2pdf.sh reports/glaze_price_summary.md
+```
+
+Reads `db/glazes.db` (no scraping — reports on whatever's currently cached; run `price_batch.py` first for each recipe if you want fresher numbers reflected) and writes `reports/glaze_price_summary.md` (grouped by `firing_type`, one row per recipe: `$/lb`, batch weight, total cost, oldest `last_verified` among its ingredients as "Last Priced," and a flag if any ingredient is still unpriced) plus a `reports/glaze_price_summary.csv` twin for spreadsheet use. The `md2pdf.sh` step turns it into the actual file you hand to stakeholders. Regenerate both before sharing an updated copy — it's cheap and keeps the deliverable honest about staleness.
+
 ### Before committing
 
 ```
