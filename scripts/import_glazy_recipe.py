@@ -14,7 +14,10 @@ this also handles the "upgrade" case: a recipe bulk-imported from a personal
 spreadsheet (scripts/import_csv_recipes.py, no glazy_url yet, is_addition
 defaulted to false) that Jake has since added to Glazy by hand — re-running
 this script with --force and the new URL replaces the placeholder row with
-the real one, including the correct is_addition split.
+the real one, including the correct is_addition split. Any existing
+recipes.notes (e.g. a manually-added STAKEHOLDER NOTE/REFERENCE ONLY flag,
+see .claude/rules/conventions.md) is carried forward across a --force
+re-import rather than wiped, since Glazy's page has no equivalent field.
 
 New materials encountered here are inserted with match_confidence='not_found'
 and no price data — run scripts/find_material_candidates.py /
@@ -201,7 +204,17 @@ def main() -> None:
         )
         conn.close()
         return
+    existing_notes = None
     if existing:
+        # Preserve any manually-curated notes (e.g. STAKEHOLDER NOTE /
+        # REFERENCE ONLY flags) across a --force re-import -- these aren't
+        # on the Glazy page itself, so a plain delete+reinsert would
+        # silently wipe them. Confirmed missing 2026-07-05 on Post Pac Man's
+        # thin-application note after a re-import; restored by hand there,
+        # fixed here so it doesn't happen again.
+        existing_notes = conn.execute(
+            "SELECT notes FROM recipes WHERE id = ?", (existing[0],)
+        ).fetchone()[0]
         conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (existing[0],))
         conn.execute("DELETE FROM recipes WHERE id = ?", (existing[0],))
 
@@ -211,8 +224,8 @@ def main() -> None:
         firing_type = "raku" if "raku" in atmosphere.lower() else "mid-fire"
 
     cursor = conn.execute(
-        "INSERT INTO recipes (name, glazy_url, firing_type, cone, atmosphere, status, imported_date) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        "INSERT INTO recipes (name, glazy_url, firing_type, cone, atmosphere, status, imported_date, notes) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
         (
             metadata["name"],
             args.glazy_url,
@@ -221,6 +234,7 @@ def main() -> None:
             metadata["atmosphere"],
             metadata["status"],
             date.today().isoformat(),
+            existing_notes,
         ),
     )
     recipe_id = cursor.lastrowid
