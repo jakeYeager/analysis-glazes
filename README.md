@@ -4,11 +4,14 @@ Cost analysis for a ceramics studio's glaze recipes and raw-material pricing. St
 
 ## What's here
 
-- `recipes/` — logged ingredient lists (material + amount by weight) for each glaze recipe tracked so far.
-- `ingredients/` — verified per-lb bulk pricing for each raw material, pulled from the supplier's live site (not estimated).
-- `docs/price_list_run_notes.md` — first-pass methodology log: what was verified, how, what went wrong along the way, and a running checklist for future price-collection passes.
+Recipes, materials, and prices live in `db/glazes.db` (SQLite, gitignored — rebuild it with `python3 scripts/db_build.py`). See `.claude/CLAUDE.md` for the full workflow.
+
+- `db/schema.sql` — the database schema (tracked; the `.db` file itself isn't).
+- `recipes/` — `recipe_metadata.csv` (one row per recipe) and `compare_recipes.csv` (one row per ingredient): git-tracked checkpoints of the DB's recipe data, refreshed via `scripts/db_export.py`.
+- `ingredients/` — `ingredient_prices.csv` (verified per-lb bulk pricing, pulled from the supplier's live site, not estimated) and `name_candidates_log.csv`: git-tracked checkpoints of the DB's material data.
+- `docs/archive/price_list_run_notes.md` — historical methodology log from before the workflow was automated; kept for context, not required reading (see `.claude/CLAUDE.md`).
 - `reports/` (+ `/pdfs/`) — report deliverables like full per-batch cost comparison between two recipes.
-- `scripts/` — utilitiy scripts like regenerate a shareable PDF from any Markdown report here.
+- `scripts/` — the automated workflow: fetching recipes, pricing materials, and syncing the DB with its checkpoint CSVs.
 
 ## Source systems
 

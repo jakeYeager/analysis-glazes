@@ -97,6 +97,6 @@ This is the more grounded number, since it needs no assumption about batch size.
 
 - `recipes/compare_recipes.csv` — Frogskin and "Giggin' for Salvation" ingredient lists  
 - `ingredients/ingredient_prices.csv` — verified IMCO pricing for all materials in both recipes  
-- `docs/price_list_run_notes.md` — pricing methodology and verification history  
+- `docs/archive/price_list_run_notes.md` — pricing methodology and verification history (archived; current workflow is in `.claude/CLAUDE.md`)  
 - Glazy recipe: <https://glazy.org/recipes/292795> (Frogskin)  
 - Internal chat thread, 2026-07-04 (studio glaze tech / Jake), screenshot only — not machine-readable, transcribed into `recipes.csv`  

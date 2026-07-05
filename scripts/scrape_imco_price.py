@@ -8,8 +8,9 @@ One-time setup (real browser binary, not ephemeral like the rest of this
 project's tooling):
     uv run --with playwright playwright install chromium
 
-Automates the technique documented by hand in docs/price_list_run_notes.md:
-IMCO (Square Online) product pages expose a weight/quantity <select>; picking
+Automates the technique originally documented by hand in
+docs/archive/price_list_run_notes.md: IMCO (Square Online) product pages
+expose a weight/quantity <select>; picking
 each option updates the displayed price without a page reload. This script
 loops every option, dispatches a `change` event, and reads back whichever
 "$X.XX" text on the page changed as a result — rather than hardcoding a CSS

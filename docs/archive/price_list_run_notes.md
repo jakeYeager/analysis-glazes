@@ -2,9 +2,20 @@
 |---|---|
 | **Date** | 2026-07-04 |
 | **Last Updated** | 2026-07-04 |
-| **Document Version** | 1.0 |
-| **Generation Model** | Claude Haiku 4.5 |
-| **Author** | Claude Code |
+| **Document Version** | 2.0 |
+| **Generation Model** | Claude Sonnet 5 |
+| **Author** | Jake Yeager |
+
+> **ARCHIVED — historical record only, not an operational guide.** This log
+> documents how the current workflow was built: Runs 1-3 were manual,
+> browser-driven data collection; Runs 4-9 automated that into the
+> Playwright scripts and SQLite database (`db/glazes.db`) now in use. It's
+> kept for the reasoning behind design decisions — non-monotonic bulk
+> pricing, JS-rendered source sites, ingredient-name mismatches, and so on —
+> not as a how-to. **The current, complete workflow lives in
+> `.claude/CLAUDE.md`** (and conventions in `.claude/rules/conventions.md`);
+> read those instead for day-to-day work. No new runs should be appended
+> here — if the workflow changes again, extend `CLAUDE.md` directly.
 
 > **✅ VERIFIED 2026-07-04.** This document's data was initially flagged as likely fabricated (a spot-check via the text-only `WebFetch` tool returned empty content for both `glazy.org` and `clayimco.com`, since both are JS-rendered SPAs that don't serve content to a plain fetch). That flag was a false alarm from the verification method, not the data: a follow-up check using real browser automation (`claude-in-chrome`) confirmed the original agent did have genuine browser access and got it right — all 9 ingredient names/percentages from the Glazy recipe and all 9 IMCO SKUs/price ranges below were independently re-confirmed live on-page. Lesson learned: verifying a claimed web-scrape requires a tool that can actually render JavaScript, not a plain-text fetch. See the corrected platform note under "IMCO Search UI" — this is a Square Online store, not Shopify.
 
