@@ -204,6 +204,19 @@ Refactored `ingredients/ingredient_prices.csv` to add six standard per-quantity 
 
 Verified live against Potash Feldspar (the kg-bag case) and Copper Carbonate (the sub-1lb case) by forcing a refresh of both: bucketing worked as designed (55.14 lb → `price_50lb`, with a stderr warning since it's an approximation) and the 1/4 lb and 1/2 lb tiers were correctly dropped from tracking. Also caught a new inconsistency in the process: IMCO's option-label unit text isn't consistent across products (`"lb"`, `"lbs"`, `"LBS"`, `"#"` all seen live) — `price_batch.py` now normalizes any of these to `"lb"` on write-back so the sheet doesn't quietly reintroduce unit-text drift.
 
+## Run 6 (2026-07-04) — migrated to db/glazes.db (branch `sqlite-backend`)
+
+Ahead of scaling to ~50 recipes (split mid-fire/raku), moved recipes/materials/prices off two flat CSVs into a normalized SQLite database (`db/glazes.db`, schema in `db/schema.sql`) so recipe-level metadata isn't denormalized across every ingredient row and material names get a real foreign key instead of free-text joining. The CSVs (`recipes/compare_recipes.csv`, `ingredients/ingredient_prices.csv`, `ingredients/name_candidates_log.csv`) remain the git-tracked source of record — `scripts/db_build.py` hydrates the DB from them, `scripts/db_export.py` flushes DB state back. See `CLAUDE.md` "Database-backed workflow" for the full picture. `scripts/price_batch.py` and `scripts/find_material_candidates.py` now read/write the DB directly instead of CSVs; their scraping/staleness/bucketing logic is unchanged.
+
+Added `scripts/import_glazy_recipe.py`, a Playwright script that fetches a Glazy recipe once and inserts it (recipes don't drift like prices, so there's no refresh loop — just fetch-once, idempotent on `glazy_url` unless `--force`). This is what actually makes ingesting ~50 recipes tractable: 50 script calls instead of 50 agent browsing sessions.
+
+**Verified live:**
+
+- `db_build.py` → `db_export.py` round-trip reproduces the pre-migration CSVs exactly (byte-for-byte identical values; only cosmetic quote-mark differences on fields without embedded commas, which is valid CSV either way).
+- `price_batch.py`, now DB-backed, reproduces both existing totals unchanged: Frogskin $242.71/$2.27 per lb, Giggin' for Salvation $261.94/$2.27 per lb.
+- `import_glazy_recipe.py` tested against `glazy.org/recipes/292795` (Frogskin): confirmed idempotent no-op without `--force`, and with `--force` correctly re-parsed all 9 ingredients/amounts, cone (`△5½-6`), atmosphere (`Oxidation`), and status (`Testing`) — all matching Run 1's hand-transcribed values exactly. Also opportunistically backfills `glazy_material_url` on existing materials once a live recipe page reveals it (e.g. Silica → `glazy.org/materials/15400`), so future `find_material_candidates.py` runs can skip re-crawling.
+- **Not yet confirmed:** `import_glazy_recipe.py`'s `is_addition` detection assumes a `"+"`-prefixed amount marks an addition — Frogskin's own Glazy page has no additions to test this against, so it's unverified. Check this against a real Glazy recipe that has additions before trusting a bulk import's `is_addition` flags.
+
 ## Source Files Referenced
 
 - Glazy recipe page: https://glazy.org/recipes/292795  

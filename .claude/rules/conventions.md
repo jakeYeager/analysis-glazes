@@ -1,11 +1,21 @@
 # Conventions
 
+## Firing type
+
+`recipes.firing_type` (in `db/glazes.db`, exported to
+`recipes/compare_recipes.csv`) is either `mid-fire` or `raku`. Infer it from
+cone if not stated directly: cone 04-08 (low-fire) is raku territory in this
+studio's practice, cone 04 and hotter (up to ~6) is mid-fire. When in doubt,
+ask rather than guess — the two firing types aren't cost-interchangeable
+(raku glazes are typically simpler, fewer/cheaper materials) and mixing them
+in a report without the tag defeats the point of tracking it.
+
 ## Ingredient price tiers
 
-`ingredients/ingredient_prices.csv` tracks per-quantity IMCO pricing in six
-standard columns: `price_1lb, price_5lb, price_10lb, price_25lb, price_50lb,
-price_100lb`. Two simplifying rules apply when scraped data doesn't line up
-with these buckets exactly:
+`materials` (in `db/glazes.db`, exported to `ingredients/ingredient_prices.csv`)
+tracks per-quantity IMCO pricing in six standard columns: `price_1lb,
+price_5lb, price_10lb, price_25lb, price_50lb, price_100lb`. Two simplifying
+rules apply when scraped data doesn't line up with these buckets exactly:
 
 - **Sub-1 lb tiers are dropped.** Some materials (e.g. colorants like Copper
   Carbonate) also sell in 1/4 lb or 1/2 lb minimums below their 1 lb tier.

@@ -4,28 +4,29 @@
 Usage:
     uv run --with playwright scripts/price_batch.py "<recipe name>"
 
-For each material in the named recipe (from recipes/compare_recipes.csv):
-  - if ingredient_prices.csv has no confirmed price (missing row, or
-    match_confidence == not_found): shells out to find_material_candidates.py
-    to log IMCO candidates via Glazy's alternate-name list, flags it, and
-    excludes it from the total (never fabricates a price).
+Reads/writes db/glazes.db directly (run scripts/db_build.py first if it
+doesn't exist yet). For each material in the named recipe:
+  - if match_confidence == 'not_found': shells out to
+    find_material_candidates.py to log IMCO candidates via Glazy's
+    alternate-name list, flags it, and excludes it from the total (never
+    fabricates a price).
   - if confirmed and last_verified is within STALENESS_DAYS: uses the cached
     price as-is.
   - if confirmed but stale: shells out to scrape_imco_price.py for a fresh
-    tier table, updates that row's price fields + last_verified, and marks
-    it refreshed.
+    tier table, updates that material's row in place, inserts a
+    price_snapshots row, and marks it refreshed.
 
-If anything was refreshed, ingredient_prices.csv is rewritten in place and a
-dated copy is archived to ingredients/snapshots/. Prints an itemized cost
-table (mirroring reports/frit3134_vs_gerstley_borate_cost_comparison.md)
-plus which materials were cached vs. refreshed vs. unresolved. This script
-produces numbers only — turning them into a narrative report stays a manual
-step, since that requires judgment a script can't apply.
+Prints an itemized cost table (mirroring
+reports/frit3134_vs_gerstley_borate_cost_comparison.md) plus which materials
+were cached vs. refreshed vs. unresolved. Run scripts/db_export.py afterward
+to flush any changes back to the checkpoint CSVs before committing. This
+script produces numbers only — turning them into a narrative report stays a
+manual step, since that requires judgment a script can't apply.
 """
 
-import csv
 import json
 import re
+import sqlite3
 import subprocess
 import sys
 from datetime import date
@@ -34,13 +35,9 @@ from pathlib import Path
 STALENESS_DAYS = 90
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-RECIPES_CSV = REPO_ROOT / "recipes" / "compare_recipes.csv"
-PRICES_CSV = REPO_ROOT / "ingredients" / "ingredient_prices.csv"
-SNAPSHOTS_DIR = REPO_ROOT / "ingredients" / "snapshots"
+DB_PATH = REPO_ROOT / "db" / "glazes.db"
 
 QUANTITY_RE = re.compile(r"^([\d.]+(?:/[\d.]+)?)\s*(.*)$")
-
-
 POUND_UNIT_RE = re.compile(r"^(lbs?|#|pounds?)$", re.IGNORECASE)
 
 
@@ -71,42 +68,17 @@ def parse_price(price_str: str) -> float:
     return float(price_str.replace("$", "").replace(",", ""))
 
 
-def load_recipe(recipe_name: str) -> list[dict]:
-    with open(RECIPES_CSV, newline="") as f:
-        rows = [row for row in csv.DictReader(f) if row["recipe"] == recipe_name]
-    if not rows:
-        print(f"no rows found for recipe '{recipe_name}' in {RECIPES_CSV}", file=sys.stderr)
-        sys.exit(1)
-    return rows
-
-
-def load_prices() -> tuple[list[str], dict[str, dict]]:
-    with open(PRICES_CSV, newline="") as f:
-        reader = csv.DictReader(f)
-        fieldnames = reader.fieldnames or []
-        prices = {row["material_name"]: row for row in reader}
-    return fieldnames, prices
-
-
-def write_prices(path: Path, fieldnames: list[str], prices: dict[str, dict]) -> None:
-    with open(path, "w", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        writer.writerows(prices.values())
-
-
-def is_stale(price_row: dict) -> bool:
-    last_verified = price_row.get("last_verified", "").strip()
+def is_stale(last_verified: str | None) -> bool:
     if not last_verified:
         return True
     return (date.today() - date.fromisoformat(last_verified)).days > STALENESS_DAYS
 
 
-# Standard tier columns tracked in ingredient_prices.csv. Per
-# .claude/rules/conventions.md: sub-1lb tiers aren't tracked (recipes here
-# are always priced in whole-lb-and-up quantities), and a tier whose real
-# quantity doesn't land on one of these exactly (e.g. a 25kg/55.14lb bag)
-# gets bucketed into the closest standard column.
+# Standard tier columns tracked on materials. Per .claude/rules/conventions.md:
+# sub-1lb tiers aren't tracked (recipes here are always priced in
+# whole-lb-and-up quantities), and a tier whose real quantity doesn't land on
+# one of these exactly (e.g. a 25kg/55.14lb bag) gets bucketed into the
+# closest standard column.
 STANDARD_TIER_LBS = [1, 5, 10, 25, 50, 100]
 
 
@@ -124,16 +96,18 @@ def bucket_tiers(parsed: list[tuple[float, str, float]]) -> dict[int, tuple[floa
     return buckets
 
 
-def refresh_price_row(price_row: dict) -> None:
+def refresh_material(conn: sqlite3.Connection, material_id: int, material_name: str, imco_url: str) -> tuple[float, str] | None:
+    """Rescrape imco_url, update the materials row + insert a price_snapshots
+    row. Returns the new (bulk_price, bulk_unit), or None if the refresh failed."""
     result = subprocess.run(
-        ["uv", "run", "--with", "playwright", "scripts/scrape_imco_price.py", price_row["imco_url"]],
+        ["uv", "run", "--with", "playwright", "scripts/scrape_imco_price.py", imco_url],
         cwd=REPO_ROOT,
         capture_output=True,
         text=True,
     )
     if result.returncode != 0:
-        print(f"  refresh failed for {price_row['material_name']}: {result.stderr.strip()}", file=sys.stderr)
-        return
+        print(f"  refresh failed for {material_name}: {result.stderr.strip()}", file=sys.stderr)
+        return None
 
     tiers = json.loads(result.stdout)
     parsed = []
@@ -145,37 +119,58 @@ def refresh_price_row(price_row: dict) -> None:
             continue  # sub-1lb tiers aren't tracked, see STANDARD_TIER_LBS comment
         parsed.append((qty, unit, parse_price(tier["price"])))
     if not parsed:
-        print(f"  refresh returned no usable tiers for {price_row['material_name']}", file=sys.stderr)
-        return
+        print(f"  refresh returned no usable tiers for {material_name}", file=sys.stderr)
+        return None
 
     smallest = min(parsed, key=lambda t: t[0])
     cheapest_per_unit = min(parsed, key=lambda t: t[2] / t[0])
-
-    price_row["price"] = f"{smallest[2]:.2f}"
-    price_row["unit"] = f"{smallest[0]:g} {smallest[1]}"
-    price_row["bulk_price"] = f"{cheapest_per_unit[2]:.2f}"
-    price_row["bulk_unit"] = f"{cheapest_per_unit[0]:g} {cheapest_per_unit[1]}"
-    price_row["last_verified"] = date.today().isoformat()
+    price = smallest[2]
+    unit = f"{smallest[0]:g} {smallest[1]}"
+    bulk_price = cheapest_per_unit[2]
+    bulk_unit = f"{cheapest_per_unit[0]:g} {cheapest_per_unit[1]}"
+    last_verified = date.today().isoformat()
 
     buckets = bucket_tiers(parsed)
+    tier_values = {}
     for bucket in STANDARD_TIER_LBS:
-        column = f"price_{bucket}lb"
         if bucket in buckets:
-            price, actual_qty = buckets[bucket]
-            price_row[column] = f"{price:.2f}"
+            bucket_price, actual_qty = buckets[bucket]
+            tier_values[bucket] = bucket_price
             if abs(actual_qty - bucket) > 0.01:
                 print(
-                    f"  {price_row['material_name']}: bucketed {actual_qty:g} lb tier into "
-                    f"{column} (approximation) -- update notes if this needs disclosing",
+                    f"  {material_name}: bucketed {actual_qty:g} lb tier into price_{bucket}lb "
+                    "(approximation) -- update notes if this needs disclosing",
                     file=sys.stderr,
                 )
         else:
-            price_row[column] = ""
+            tier_values[bucket] = None
+
+    conn.execute(
+        "UPDATE materials SET price=?, unit=?, bulk_price=?, bulk_unit=?, "
+        "price_1lb=?, price_5lb=?, price_10lb=?, price_25lb=?, price_50lb=?, price_100lb=?, "
+        "last_verified=? WHERE id=?",
+        (
+            price, unit, bulk_price, bulk_unit,
+            tier_values[1], tier_values[5], tier_values[10], tier_values[25], tier_values[50], tier_values[100],
+            last_verified, material_id,
+        ),
+    )
+    conn.execute(
+        "INSERT INTO price_snapshots (material_id, snapshot_date, price, unit, bulk_price, bulk_unit, "
+        "price_1lb, price_5lb, price_10lb, price_25lb, price_50lb, price_100lb) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            material_id, last_verified, price, unit, bulk_price, bulk_unit,
+            tier_values[1], tier_values[5], tier_values[10], tier_values[25], tier_values[50], tier_values[100],
+        ),
+    )
+    conn.commit()
+    return bulk_price, bulk_unit
 
 
-def log_candidates(recipe_glazy_url: str, material_name: str) -> None:
+def log_candidates(recipe_glazy_url: str | None, material_name: str) -> None:
     if not recipe_glazy_url:
-        print(f"  no glazy_url on this recipe row — can't look up candidates for {material_name}", file=sys.stderr)
+        print(f"  no glazy_url on this recipe — can't look up candidates for {material_name}", file=sys.stderr)
         return
     subprocess.run(
         ["uv", "run", "--with", "playwright", "scripts/find_material_candidates.py", recipe_glazy_url, material_name],
@@ -188,52 +183,57 @@ def main() -> None:
         print(f"Usage: {sys.argv[0]} \"<recipe name>\"", file=sys.stderr)
         sys.exit(1)
 
+    if not DB_PATH.exists():
+        raise SystemExit(f"{DB_PATH} doesn't exist -- run scripts/db_build.py first")
+
     recipe_name = sys.argv[1]
-    recipe_rows = load_recipe(recipe_name)
-    fieldnames, prices = load_prices()
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+
+    rows = conn.execute(
+        "SELECT m.id AS material_id, m.canonical_name AS material, m.imco_url, m.match_confidence, "
+        "m.bulk_price, m.bulk_unit, m.last_verified, ri.amount, r.glazy_url "
+        "FROM recipe_ingredients ri "
+        "JOIN recipes r ON r.id = ri.recipe_id "
+        "JOIN materials m ON m.id = ri.material_id "
+        "WHERE r.name = ? ORDER BY ri.id",
+        (recipe_name,),
+    ).fetchall()
+    if not rows:
+        print(f"no rows found for recipe '{recipe_name}' in {DB_PATH}", file=sys.stderr)
+        sys.exit(1)
 
     line_items = []
     unresolved = []
-    any_refreshed = False
 
-    for row in recipe_rows:
+    for row in rows:
         material = row["material"]
-        amount = float(row["amount"])
-        price_row = prices.get(material)
+        amount = row["amount"]
 
-        if price_row is None or price_row.get("match_confidence") == "not_found":
+        if row["match_confidence"] == "not_found":
             print(f"{material}: unresolved (no confirmed price) — logging candidates")
-            log_candidates(row.get("glazy_url", ""), material)
+            log_candidates(row["glazy_url"], material)
             unresolved.append(material)
             continue
 
-        if is_stale(price_row):
-            print(f"{material}: stale (last_verified={price_row.get('last_verified') or 'never'}) — refreshing")
-            refresh_price_row(price_row)
-            any_refreshed = True
+        bulk_price, bulk_unit = row["bulk_price"], row["bulk_unit"]
+        if is_stale(row["last_verified"]):
+            print(f"{material}: stale (last_verified={row['last_verified'] or 'never'}) — refreshing")
+            refreshed = refresh_material(conn, row["material_id"], material, row["imco_url"])
+            if refreshed is None:
+                unresolved.append(material)
+                continue
+            bulk_price, bulk_unit = refreshed
             status = "refreshed"
         else:
             status = "cached"
 
-        bulk_qty, _ = parse_quantity(price_row["bulk_unit"])
-        rate = parse_price(price_row["bulk_price"]) / bulk_qty
+        bulk_qty, _ = parse_quantity(bulk_unit)
+        rate = bulk_price / bulk_qty
         cost = amount * rate
-        line_items.append(
-            {
-                "material": material,
-                "amount": amount,
-                "rate": rate,
-                "cost": cost,
-                "status": status,
-            }
-        )
+        line_items.append({"material": material, "amount": amount, "rate": rate, "cost": cost, "status": status})
 
-    if any_refreshed:
-        write_prices(PRICES_CSV, fieldnames, prices)
-        SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
-        snapshot_path = SNAPSHOTS_DIR / f"{date.today().isoformat()}-ingredient_prices.csv"
-        write_prices(snapshot_path, fieldnames, prices)
-        print(f"\nwrote refreshed prices to {PRICES_CSV} and snapshot {snapshot_path}")
+    conn.close()
 
     print(f"\n{recipe_name} — itemized cost")
     print(f"{'Material':<20}{'Amount':>10}{'$/lb':>10}{'Cost':>12}  Status")
