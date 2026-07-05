@@ -94,6 +94,7 @@ def summarize_recipe(conn: sqlite3.Connection, recipe_id: int, recipe_name: str,
 
 
 STAKEHOLDER_NOTE_PREFIX = "STAKEHOLDER NOTE"
+REFERENCE_ONLY_PREFIX = "REFERENCE ONLY"
 
 
 def render_table(rows: list[dict]) -> str:
@@ -106,8 +107,11 @@ def render_table(rows: list[dict]) -> str:
         note_parts = []
         if r["unresolved"]:
             note_parts.append(f"{len(r['unresolved'])} ingredient(s) unpriced -- total may be understated")
-        if r["recipe_notes"] and r["recipe_notes"].startswith(STAKEHOLDER_NOTE_PREFIX):
+        notes_text = r["recipe_notes"] or ""
+        if notes_text.startswith(STAKEHOLDER_NOTE_PREFIX):
             note_parts.append("see notes (db/glazes.db) -- affects how to read this $/lb figure")
+        if notes_text.startswith(REFERENCE_ONLY_PREFIX):
+            note_parts.append("reference only -- not in active rotation")
         notes = "; ".join(note_parts)
         lines.append(
             f"| {r['recipe']} | {price} | {r['total_weight']:.2f} | ${r['total_cost']:.2f} | "

@@ -81,6 +81,8 @@ An accepted convention in writing glaze recipes is parts by weight normalized to
 
 When a recipe has this kind of caveat, prefix its `recipes.notes` with `STAKEHOLDER NOTE` (see `scripts/generate_price_summary.py`'s `STAKEHOLDER_NOTE_PREFIX`) so the price summary surfaces a "see notes" flag in its table. Plain provenance notes (e.g. the bulk-import `is_addition` disclosure) should *not* use this prefix — they're not relevant to interpreting `$/lb` and would just be noise in the stakeholder report if flagged the same way.
 
+**Not every tracked recipe is in active rotation.** Some are kept purely for reference/comparison (e.g. Blue Moon, Kelly's Lo-Fire Shino — confirmed by Jake, 2026-07-04: personal favorites nobody else at the studio mixes, kept in the file anyway). A `$/lb` ranking that includes these is misleading if read as "what we actually produce" — Blue Moon and Kelly's Lo-Fire Shino currently rank #2 and #3 by `$/lb`, ahead of things the studio actually mixes regularly. Mark these with `REFERENCE ONLY` at the start of `recipes.notes` (`REFERENCE_ONLY_PREFIX` in `scripts/generate_price_summary.py`) so the price summary flags them as "reference only — not in active rotation" rather than implying production relevance.
+
 ## New reports
 
 After the title, make a short framing paragraph explaining why the doc exists, tables over prose for numbers, and a "Source files referenced" list at the bottom.
