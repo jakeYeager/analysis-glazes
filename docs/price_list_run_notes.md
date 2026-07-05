@@ -242,6 +242,17 @@ Web-searched Run 7's flagged duplicate: multiple independent ceramic-supply sour
 
 **Merged the existing Run 7 duplicate:** repointed "Looks Expensive"'s `recipe_ingredients` row from "Ferro Frit 3134" to the existing "Frit 3134," deleted the now-orphaned duplicate materials row, and added a note to "Frit 3134" documenting the merge and the web-search evidence. Re-ran the full recipe pricing afterward: Frit 3134 now correctly appears priced (27.40 lb × $2.70/lb = $73.98), total $142.32 / 50.50 lb priced so far. Confirmed a full `db_build.py` → `db_export.py` → `db_build.py` → `db_export.py` round-trip still reproduces all four CSVs with zero diffs, and Frogskin/Giggin' for Salvation totals are unaffected.
 
+## Run 9 (2026-07-04) — priced the remaining four "Looks Expensive" materials
+
+Resolved the last four `not_found` materials, closing out "Looks Expensive" entirely.
+
+- **`Ferro Frit 3124` → renamed to `Frit 3124`.** Same manufacturer-prefix pattern as Run 8's `Ferro Frit 3134` fix, but this one had no pre-existing bare-name row to merge into, so it was renamed in place (`match_confidence='fuzzy'`, consistent with `Frit 3134`'s treatment — inferred equivalence, not a literal string match) rather than merged. Verified live: `clayimco.com/product/26800-frit-3124/115` is titled "26800 - Frit 3124."
+- **`Lithium Carbonate`** → IMCO SKU 25534, `match_confidence='exact'` (single generic product, no grade variants).
+- **`CMC Gum`** → IMCO SKU 25435, `match_confidence='exact'` (single generic product, no grade variants).
+- **`Tin Oxide`** → IMCO SKU 25870, `match_confidence='exact'`. The logged candidate search had returned 2 "hits," which looked like it might be another grade situation (like Wollastonite/Bentonite before) — checked live and the second hit was just a token-overlap false positive ("Chrome Oxide Green" sharing the word "oxide"), not a real second product. Only one Tin Oxide exists on IMCO.
+
+Set `imco_url`/`match_confidence` on all four, left `last_verified` unset, then ran `scripts/price_batch.py` normally — it correctly treated them as "confirmed but stale" and auto-refreshed all four through the existing `scrape_imco_price.py` path (no new pricing logic needed). "Looks Expensive" is now fully priced: **$492.57 / 106.30 lb = $4.63/lb** — notably higher than Frogskin/Giggin' for Salvation's $2.27/lb, driven by Lithium Carbonate ($20/lb) and Tin Oxide ($30/lb), both potent low-fire/raku specialty materials used in small amounts. Zero `not_found` materials remain across the whole database. Confirmed a full round-trip and all three recipes' totals stable afterward.
+
 ## Source Files Referenced
 
 - Glazy recipe page: https://glazy.org/recipes/292795  
