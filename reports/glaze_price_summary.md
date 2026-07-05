@@ -23,7 +23,6 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 |---|---|---|---|---|---|
 | Ballingham Black Luster | $5.24 | 133.50 | $700.07 | 2026-07-04 |  |
 | Bill's Neon Blue 2025 | $4.43 | 107.00 | $473.97 | 2026-07-04 |  |
-| Blue Moon | $7.03 | 102.00 | $717.27 | 2026-07-04 | reference only -- not in active rotation |
 | Clear Crackle | $3.73 | 100.00 | $372.80 | 2026-07-04 |  |
 | Copper Sand | $5.77 | 113.75 | $656.00 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
 | Del Favero Luster | $3.89 | 102.00 | $396.80 | 2026-07-04 |  |
