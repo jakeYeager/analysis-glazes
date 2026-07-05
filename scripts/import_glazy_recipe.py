@@ -8,7 +8,13 @@ Recipes don't drift like prices do, so unlike scrape_imco_price.py there's no
 staleness window here — a recipe is fetched once and that's it. Re-running
 against a glazy_url already in the recipes table is a no-op unless --force
 is passed (which deletes the existing recipe + its recipe_ingredients rows
-and re-imports fresh; materials/prices are untouched either way).
+and re-imports fresh; materials/prices are untouched either way). The
+existing-recipe check matches on *either* glazy_url or the scraped name, so
+this also handles the "upgrade" case: a recipe bulk-imported from a personal
+spreadsheet (scripts/import_csv_recipes.py, no glazy_url yet, is_addition
+defaulted to false) that Jake has since added to Glazy by hand — re-running
+this script with --force and the new URL replaces the placeholder row with
+the real one, including the correct is_addition split.
 
 New materials encountered here are inserted with match_confidence='not_found'
 and no price data — run scripts/find_material_candidates.py /
@@ -158,14 +164,14 @@ def main() -> None:
         raise SystemExit(f"{DB_PATH} doesn't exist -- run scripts/db_build.py first")
 
     conn = sqlite3.connect(DB_PATH)
-    existing = conn.execute("SELECT id, name FROM recipes WHERE glazy_url = ?", (args.glazy_url,)).fetchone()
-    if existing and not args.force:
-        print(f"'{existing[1]}' already imported from {args.glazy_url} -- use --force to re-import")
+
+    # Fast path: skip the browser entirely if this exact URL is already
+    # imported and --force wasn't passed.
+    by_url = conn.execute("SELECT id, name FROM recipes WHERE glazy_url = ?", (args.glazy_url,)).fetchone()
+    if by_url and not args.force:
+        print(f"'{by_url[1]}' already imported from {args.glazy_url} -- use --force to re-import")
         conn.close()
         return
-    if existing and args.force:
-        conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (existing[0],))
-        conn.execute("DELETE FROM recipes WHERE id = ?", (existing[0],))
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
@@ -177,6 +183,27 @@ def main() -> None:
         metadata = parse_metadata(lines)
         ingredients = parse_ingredients(page)
         browser.close()
+
+    # Re-check by name too, now that we know it: catches a recipe imported
+    # earlier via import_csv_recipes.py (no glazy_url yet) that shares this
+    # Glazy page's name -- recipes.name is UNIQUE, so this would otherwise
+    # crash on INSERT instead of upgrading the existing row.
+    by_name = conn.execute(
+        "SELECT id, name, glazy_url FROM recipes WHERE name = ?", (metadata["name"],)
+    ).fetchone()
+    existing = by_url or by_name
+    if by_name and not by_url and not args.force:
+        # Only reachable here when by_url was empty (the not-force/by_url
+        # case already returned above), so this is always the name-only match.
+        print(
+            f"a recipe named '{metadata['name']}' already exists "
+            f"(glazy_url={by_name[2]!r}) -- use --force to overwrite it"
+        )
+        conn.close()
+        return
+    if existing:
+        conn.execute("DELETE FROM recipe_ingredients WHERE recipe_id = ?", (existing[0],))
+        conn.execute("DELETE FROM recipes WHERE id = ?", (existing[0],))
 
     firing_type = args.firing_type
     if firing_type is None:

@@ -25,7 +25,7 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 | Bill's Neon Blue 2024 | $4.53 | 109.00 | $493.97 | 2026-07-04 |  |
 | Blue Moon | $7.03 | 102.00 | $717.27 | 2026-07-04 |  |
 | Clear Crackle | $3.73 | 100.00 | $372.80 | 2026-07-04 |  |
-| Copper Sand | $5.84 | 115.75 | $676.00 | 2026-07-04 |  |
+| Copper Sand | $5.77 | 113.75 | $656.00 | 2026-07-04 |  |
 | Del Favero Luster | $3.89 | 102.00 | $396.80 | 2026-07-04 |  |
 | Emerald Green Copper Flash | $3.43 | 109.00 | $373.80 | 2026-07-04 |  |
 | Ferguson White Crackle | $6.06 | 100.00 | $606.30 | 2026-07-04 |  |
