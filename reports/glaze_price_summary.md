@@ -30,7 +30,7 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 | Emerald Green Copper Flash | $3.43 | 109.00 | $373.80 | 2026-07-04 |  |
 | Ferguson White Crackle | $6.06 | 100.00 | $606.30 | 2026-07-04 |  |
 | Fern Green Crackle | $3.78 | 100.50 | $379.70 | 2026-07-04 |  |
-| Forbes Midnight Blue | $4.39 | 109.00 | $478.15 | 2026-07-04 |  |
+| Forbes Midnight Blue | $4.28 | 107.00 | $458.15 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
 | Hasselle Copper Matte | $11.43 | 103.00 | $1176.81 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
 | Kelly's Lo-Fire Shino | $6.69 | 106.34 | $710.90 | 2026-07-04 | reference only -- not in active rotation |
 | Looks Expensive | $4.63 | 106.30 | $492.57 | 2026-07-04 |  |
