@@ -231,6 +231,17 @@ Imported `glazy.org/recipes/631749` ("Looks Expensive," a raku glaze) via `impor
 
 Ran the full pricing workflow end-to-end on the new recipe: 4 of 9 materials priced from cache (Silica, EP Kaolin, Bentonite, Copper Carbonate — all already known from the other two recipes), the other 5 (both frits, Lithium Carbonate, CMC Gum, Tin Oxide) correctly triggered `find_material_candidates.py` and were excluded from the total rather than guessed. Partial total: $68.34 / 23.10 lb priced so far = $2.96/lb, pending the 5 unresolved materials.
 
+## Run 8 (2026-07-04) — confirmed and fixed the Ferro Frit duplicate; resolved it
+
+Web-searched Run 7's flagged duplicate: multiple independent ceramic-supply sources (Bailey, Axner, Digitalfire, US Pigment, Scarva, Trinity Ceramic) confirm "Ferro Frit 3134" and "Frit 3134" are the same Ferro Corporation product — Ferro's proprietary frit numbering (3124, 3134, etc.) became the de facto industry reference number, and suppliers vary on whether they include the manufacturer name. Documented as a confirmed class of name variant in `.claude/rules/conventions.md` ("Material name variants") rather than only in this log, since that file loads automatically every session in this repo — a more reliable home for it than a one-off memory note.
+
+**Fixed at the source, in two places, not just documented:**
+
+- `scripts/import_glazy_recipe.py`'s `get_or_create_material()` now checks whether stripping a known manufacturer prefix (`KNOWN_MANUFACTURER_PREFIXES = ["Ferro"]`) matches an *existing* material before creating a new row — so a future recipe using "Ferro Frit 3134" reuses the already-priced "Frit 3134" instead of creating a duplicate. Verified: re-imported "Looks Expensive" with `--force` and confirmed it printed `'Ferro Frit 3134' matched existing material 'Frit 3134' after stripping known manufacturer prefix` and created no duplicate.
+- `scripts/find_material_candidates.py` now also tries the prefix-stripped name as an IMCO search term. This paid off immediately on a second, unplanned case in the same test run: `"Ferro Frit 3124"` (also in "Looks Expensive," still unresolved) → tried `"Frit 3124"` → found IMCO SKU 26800 with a clean fuzzy match, where the un-stripped name alone had returned 0 relevant hits. Not merged automatically (per the never-fabricate rule — this one still needs pricing + human confirmation), but the candidate is now logged and easy to act on.
+
+**Merged the existing Run 7 duplicate:** repointed "Looks Expensive"'s `recipe_ingredients` row from "Ferro Frit 3134" to the existing "Frit 3134," deleted the now-orphaned duplicate materials row, and added a note to "Frit 3134" documenting the merge and the web-search evidence. Re-ran the full recipe pricing afterward: Frit 3134 now correctly appears priced (27.40 lb × $2.70/lb = $73.98), total $142.32 / 50.50 lb priced so far. Confirmed a full `db_build.py` → `db_export.py` → `db_build.py` → `db_export.py` round-trip still reproduces all four CSVs with zero diffs, and Frogskin/Giggin' for Salvation totals are unaffected.
+
 ## Source Files Referenced
 
 - Glazy recipe page: https://glazy.org/recipes/292795  

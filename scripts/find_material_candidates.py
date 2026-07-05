@@ -21,6 +21,10 @@ names for that generic material, rendered as one comma-separated line.
 IMCO's search also doesn't return zero results for a bad query; it falls
 back to unrelated "trending" products, so raw hit count alone isn't a
 relevance signal — see the token-overlap filter in search_imco().
+
+Also tries the material name with a known manufacturer prefix stripped
+(e.g. "Ferro Frit 3134" -> "Frit 3134") as an extra search term, since
+IMCO's own catalog often drops it — see KNOWN_MANUFACTURER_PREFIXES.
 """
 
 import re
@@ -34,6 +38,20 @@ from playwright.sync_api import sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "db" / "glazes.db"
+
+# Manufacturer prefixes suppliers/Glazy are inconsistent about including —
+# keep in sync with the same list in import_glazy_recipe.py and
+# .claude/rules/conventions.md "Material name variants" (the source of
+# truth for why this list exists and what's confirmed so far).
+KNOWN_MANUFACTURER_PREFIXES = ["Ferro"]
+
+
+def strip_known_prefix(name: str) -> str | None:
+    for prefix in KNOWN_MANUFACTURER_PREFIXES:
+        if name.startswith(prefix + " "):
+            return name[len(prefix) + 1 :]
+    return None
+
 
 ALT_NAME_HEADING_RE = re.compile(
     r"alternate names?|also known as|synonyms?|child materials?", re.IGNORECASE
@@ -134,7 +152,8 @@ def main() -> None:
             browser.close()
             sys.exit(1)
 
-        terms_to_try = [material_name] + alt_names
+        stripped = strip_known_prefix(material_name)
+        terms_to_try = [material_name] + ([stripped] if stripped else []) + alt_names
         for term in terms_to_try:
             matches = search_imco(page, term)
             rows.append(

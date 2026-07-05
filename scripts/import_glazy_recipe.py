@@ -13,9 +13,14 @@ and re-imports fresh; materials/prices are untouched either way).
 New materials encountered here are inserted with match_confidence='not_found'
 and no price data — run scripts/find_material_candidates.py /
 scripts/price_batch.py afterward to resolve and price them, same as any
-other unpriced material. This is the actual fix for ingesting ~50 recipes
-without 50 agent browsing sessions: each recipe becomes one idempotent
-script call.
+other unpriced material. Before creating a new row, get_or_create_material()
+also checks whether stripping a known manufacturer prefix (see
+KNOWN_MANUFACTURER_PREFIXES below) matches an existing material, so e.g.
+"Ferro Frit 3134" reuses the already-priced "Frit 3134" row instead of
+creating a duplicate — this is what caused the Run 7 "Ferro Frit 3134"
+duplicate, resolved in Run 8. This is the actual fix for ingesting ~50
+recipes without 50 agent browsing sessions: each recipe becomes one
+idempotent script call.
 
 Confirmed live against glazy.org/recipes/292795 (Frogskin, no additions) and
 glazy.org/recipes/631749 (a raku recipe with additions): recipe
@@ -43,6 +48,22 @@ from playwright.sync_api import sync_playwright
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 DB_PATH = REPO_ROOT / "db" / "glazes.db"
+
+# Manufacturer prefixes suppliers/Glazy are inconsistent about including.
+# Confirmed 2026-07-04 via web search: "Ferro Frit NNNN" and "Frit NNNN" are
+# the same Ferro Corporation product -- Ferro's frit numbering (3124, 3134,
+# etc.) is the de facto industry reference number, and most ceramic supply
+# sites list it either with or without the manufacturer name. See
+# .claude/rules/conventions.md "Material name variants". Extend this list
+# if another manufacturer prefix causes the same duplicate-material problem.
+KNOWN_MANUFACTURER_PREFIXES = ["Ferro"]
+
+
+def strip_known_prefix(name: str) -> str | None:
+    for prefix in KNOWN_MANUFACTURER_PREFIXES:
+        if name.startswith(prefix + " "):
+            return name[len(prefix) + 1 :]
+    return None
 
 
 def parse_metadata(lines: list[str]) -> dict:
@@ -101,6 +122,17 @@ def get_or_create_material(conn: sqlite3.Connection, name: str, glazy_material_u
         if not existing_url and glazy_material_url:
             conn.execute("UPDATE materials SET glazy_material_url = ? WHERE id = ?", (glazy_material_url, material_id))
         return material_id
+
+    stripped = strip_known_prefix(name)
+    if stripped:
+        alt_row = conn.execute("SELECT id, glazy_material_url FROM materials WHERE canonical_name = ?", (stripped,)).fetchone()
+        if alt_row:
+            material_id, existing_url = alt_row
+            print(f"  '{name}' matched existing material '{stripped}' after stripping known manufacturer prefix")
+            if not existing_url and glazy_material_url:
+                conn.execute("UPDATE materials SET glazy_material_url = ? WHERE id = ?", (glazy_material_url, material_id))
+            return material_id
+
     cursor = conn.execute(
         "INSERT INTO materials (canonical_name, match_confidence, glazy_material_url, notes) "
         "VALUES (?, 'not_found', ?, ?)",
