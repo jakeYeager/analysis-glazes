@@ -8,35 +8,35 @@
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
-This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
+This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. Base-glaze materials (frits, feldspars, clays, silica) are costed at the cheapest bulk rate, since that's realistically how they're bought; colorants, opacifiers, and Lithium Carbonate are costed at a smaller 10lb rate instead, since those are typically bought in much smaller quantities than a full bag. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
 
 ## Mid Fire glazes
 
 | Glaze | $/lb | Batch Weight (lb) | Total Cost | Last Priced | Notes |
 |---|---|---|---|---|---|
-| Frogskin | $2.27 | 107.00 | $242.71 | 2026-07-04 |  |
-| Giggin' for Salvation | $2.27 | 115.50 | $261.94 | 2026-07-04 |  |
+| Frogskin | $2.40 | 107.00 | $257.22 | 2026-07-04 |  |
+| Giggin' for Salvation | $2.47 | 115.50 | $285.57 | 2026-07-04 |  |
 
 ## Raku glazes
 
 | Glaze | $/lb | Batch Weight (lb) | Total Cost | Last Priced | Notes |
 |---|---|---|---|---|---|
-| Ballingham Black Luster | $5.24 | 133.50 | $700.07 | 2026-07-04 |  |
-| Bill's Neon Blue 2025 | $4.43 | 107.00 | $473.97 | 2026-07-04 |  |
+| Ballingham Black Luster | $5.70 | 133.50 | $760.96 | 2026-07-04 |  |
+| Bill's Neon Blue 2025 | $5.85 | 107.00 | $626.23 | 2026-07-04 |  |
 | Clear Crackle | $3.73 | 100.00 | $372.80 | 2026-07-04 |  |
-| Copper Sand | $5.77 | 113.75 | $656.00 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
-| Del Favero Luster | $3.89 | 102.00 | $396.80 | 2026-07-04 |  |
-| Ferguson's White Crackle | $6.07 | 100.00 | $606.60 | 2026-07-04 |  |
-| Fern Green Crackle | $3.78 | 100.50 | $379.70 | 2026-07-04 |  |
-| Forbes Emerald Green Flash | $3.31 | 107.00 | $353.80 | 2026-07-04 |  |
-| Forbes Midnight Blue | $4.28 | 107.00 | $458.15 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
-| Hasselle Copper Matte | $11.43 | 103.00 | $1176.81 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
-| Kelly's Lo-Fire Shino | $6.69 | 106.34 | $710.90 | 2026-07-04 | reference only -- not in active rotation |
-| Looks Expensive | $4.63 | 106.30 | $492.57 | 2026-07-04 |  |
-| Marble White Crackle | $4.72 | 110.00 | $519.20 | 2026-07-04 |  |
-| Post Pac Man | $5.02 | 114.70 | $575.75 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
-| Reynolds Wrap | $4.08 | 114.00 | $465.26 | 2026-07-04 |  |
-| Sky Blue Crackle | $3.85 | 100.50 | $386.80 | 2026-07-04 |  |
+| Copper Sand | $6.03 | 113.75 | $686.25 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
+| Del Favero Luster | $3.92 | 102.00 | $399.80 | 2026-07-04 |  |
+| Ferguson's White Crackle | $6.37 | 100.00 | $636.60 | 2026-07-04 |  |
+| Fern Green Crackle | $3.79 | 100.50 | $380.80 | 2026-07-04 |  |
+| Forbes Emerald Green Flash | $3.47 | 107.00 | $371.30 | 2026-07-04 |  |
+| Forbes Midnight Blue | $5.13 | 107.00 | $548.43 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
+| Hasselle Copper Matte | $13.69 | 103.00 | $1409.65 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
+| Kelly's Lo-Fire Shino | $10.11 | 106.34 | $1075.10 | 2026-07-04 | reference only -- not in active rotation |
+| Looks Expensive | $6.08 | 106.30 | $646.03 | 2026-07-04 |  |
+| Marble White Crackle | $4.93 | 110.00 | $542.00 | 2026-07-04 |  |
+| Post Pac Man | $5.21 | 114.70 | $597.74 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
+| Reynolds Wrap | $4.24 | 114.00 | $483.82 | 2026-07-04 |  |
+| Sky Blue Crackle | $3.88 | 100.50 | $390.30 | 2026-07-04 |  |
 
 ## Source files referenced
 

@@ -91,7 +91,7 @@ Flushes `db/glazes.db` state back into the four checkpoint CSVs (`recipes/recipe
 
 ## Schema (`db/schema.sql`)
 
-- **`materials`** — one row per raw material: `price`/`unit` (smallest *tracked* tier, 1 lb and up), `bulk_price`/`bulk_unit` (cheapest true per-unit tier at its real quantity — not always the largest size, verify don't assume), `price_1lb`…`price_100lb` (tier breakdown at standard sizes), `imco_url`, `match_confidence` (`exact`/`fuzzy`/`not_found`), `notes`, `last_verified`, `glazy_material_url`.
+- **`materials`** — one row per raw material: `price`/`unit` (smallest *tracked* tier, 1 lb and up), `bulk_price`/`bulk_unit` (cheapest true per-unit tier at its real quantity — not always the largest size, verify don't assume), `price_1lb`…`price_100lb` (tier breakdown at standard sizes), `purchase_tier` (which tier column actually drives batch-cost math — `bulk` or a specific `1lb`/`5lb`/`10lb`/`25lb`/`50lb`/`100lb`; see "Purchase tier" in `.claude/rules/conventions.md`), `imco_url`, `match_confidence` (`exact`/`fuzzy`/`not_found`), `notes`, `last_verified`, `glazy_material_url`.
 - **`recipes`** — one row per recipe: `name`, `glazy_url`, `firing_type` (`mid-fire`/`raku`), `cone`, `atmosphere`, `status`, `imported_date`, `notes`.
 - **`recipe_ingredients`** — links a recipe to its materials: `amount`, `is_addition`.
 - **`price_snapshots`** — one row per material per day it was actually refreshed (history; replaces the old full-sheet-copy convention in `ingredients/snapshots/*.csv`, which stays as historical record but won't gain new dated files).
@@ -118,6 +118,30 @@ Confirmed live against Glazy and IMCO. Both are JS-rendered SPAs — data collec
 ## Open items
 
 - One material used in multiple recipes here (EP Kaolin) was found completely out of stock at the supplier as of the last price-collection run — worth rechecking before relying on any cost estimate that includes it.
+- **Added `materials.purchase_tier` (2026-07-05, per Jake) and repriced every recipe against it.** Colorants/opacifiers/suspension aids and Lithium Carbonate are realistically bought 5–10 lb at a time, not the 50lb+ bags `bulk_price` assumed — see "Purchase tier" in `.claude/rules/conventions.md` for the full rationale and current defaults. Every raku recipe containing a flagged material got more expensive (none got cheaper; Clear Crackle, with no colorants, is unchanged). Before → after `$/lb`, mid-fire and raku:
+
+  | Recipe | Before | After | Change |
+  |---|---|---|---|
+  | Frogskin | $2.27 | $2.40 | +5.7% |
+  | Giggin' for Salvation | $2.27 | $2.47 | +8.8% |
+  | Ballingham Black Luster | $5.24 | $5.70 | +8.8% |
+  | Bill's Neon Blue 2025 | $4.43 | $5.85 | +32.1% |
+  | Clear Crackle | $3.73 | $3.73 | +0.0% |
+  | Copper Sand | $5.77 | $6.03 | +4.5% |
+  | Del Favero Luster | $3.89 | $3.92 | +0.8% |
+  | Ferguson's White Crackle | $6.07 | $6.37 | +4.9% |
+  | Fern Green Crackle | $3.78 | $3.79 | +0.3% |
+  | Forbes Emerald Green Flash | $3.31 | $3.47 | +4.8% |
+  | Forbes Midnight Blue | $4.28 | $5.13 | +19.9% |
+  | Hasselle Copper Matte | $11.43 | $13.69 | +19.8% |
+  | Kelly's Lo-Fire Shino | $6.69 | $10.11 | +51.1% |
+  | Looks Expensive | $4.63 | $6.08 | +31.3% |
+  | Marble White Crackle | $4.72 | $4.93 | +4.4% |
+  | Post Pac Man | $5.02 | $5.21 | +3.8% |
+  | Reynolds Wrap | $4.08 | $4.24 | +3.9% |
+  | Sky Blue Crackle | $3.85 | $3.88 | +0.8% |
+
+  The five biggest jumps are all driven by either heavy Lithium Carbonate content (Bill's Neon Blue 2025, Looks Expensive, and — most dramatically — Kelly's Lo-Fire Shino at 24% of its batch weight) or heavy colorant content (Forbes Midnight Blue, Hasselle Copper Matte). This is a real, non-trivial change to every stakeholder-facing number in `reports/glaze_price_summary.md` — not a bug, but worth knowing the ranking shifted for this reason if you're comparing this report against an older copy.
 - **All 16 of the original raku recipes bulk-imported from a personal spreadsheet (2026-07-04, via `scripts/import_csv_recipes.py`) are now accounted for.** 14 got their `is_addition=false` default confirmed/corrected against a real Glazy page (Copper Sand, Bill's Neon Blue 2024→2025, Reynolds Wrap, Kelly's Lo-Fire Shino, Forbes Midnight Blue, Post Pac Man, Forbes Emerald Green Flash, Del Favero Luster, Fern Green Crackle, Sky Blue Crackle, Ferguson's White Crackle, Clear Crackle, Marble White Crackle, Ballingham Black Luster); 2 (Metallic Turquoise, Blue Moon) were dropped entirely instead, per Jake. See the per-recipe "Resolved" bullets below for details on each. As new recipes get added going forward, the same `import_glazy_recipe.py <url> --force` workflow applies — it matches an existing recipe by name as well as `glazy_url`, so it also handles upgrading any future bulk-imported placeholder.
 - **`Custer Feldspar`** (used only by Forbes Midnight Blue now) is priced via the G-200 substitute (same SKU as "Potash Feldspar") since Custer is confirmed discontinued (extinct as of 2024) — see that material's `notes`. Chemistry isn't identical; a recipe may need reformulation to hit original targets, which this cost analysis doesn't address. **Forbes Midnight Blue's own recipe on Glazy is locked** (Jake can't edit it to reflect the substitute), so its `recipes.notes` carries a `STAKEHOLDER NOTE` flagging that its `$/lb` is computed via G-200, not literal Custer — confirmed 2026-07-05. (Ballingham Black Luster used to be attributed here too, but its Glazy version specifies "G-200 Feldspar" directly — Jake already updated his own recipe to the real substitute, so it's priced as the plain `Potash Feldspar` material, not this inferred-substitution one — see below.)
 - **`Ball Clay`** (used in Hasselle Copper Matte, Reynolds Wrap) is priced as OM4 (Old Mine #4) — these recipes don't specify a grade, and OM4 was Jake's pick among several real options (2026-07-04). Confirm against the actual recipe if the grade matters. (Corrected 2026-07-05, twice: first attributed to Post Pac Man's spreadsheet version, which was reformulated on Glazy without any ball clay at all; then attributed to Ferguson White Crackle, whose Glazy version specifies "Tennessee ball clay" explicitly — a distinct grade, now tracked as its own `Tennessee Ball Clay` material rather than folded into this one.)

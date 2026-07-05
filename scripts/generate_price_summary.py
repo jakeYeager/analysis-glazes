@@ -58,9 +58,31 @@ def parse_quantity(label: str):
     return float(num_str)
 
 
+TIER_LB_MAP = {"1lb": 1, "5lb": 5, "10lb": 10, "25lb": 25, "50lb": 50, "100lb": 100}
+
+
+def select_rate(purchase_tier, bulk_price: float, bulk_unit: str, tier_prices: dict) -> float:
+    """$/lb to cost this material at, honoring purchase_tier -- mirrors
+    scripts/price_batch.py's select_rate() (duplicated rather than imported,
+    see this file's module docstring on why: no playwright dependency here).
+    'bulk' uses the cheapest true per-unit tier; a specific tier (e.g.
+    '10lb') costs against that cached column instead. See "Purchase tier" in
+    .claude/rules/conventions.md."""
+    if not purchase_tier or purchase_tier == "bulk" or purchase_tier not in TIER_LB_MAP:
+        qty = parse_quantity(bulk_unit)
+        return bulk_price / qty
+    tier_lb = TIER_LB_MAP[purchase_tier]
+    tier_price = tier_prices.get(tier_lb)
+    if tier_price is None:
+        qty = parse_quantity(bulk_unit)
+        return bulk_price / qty
+    return tier_price / tier_lb
+
+
 def summarize_recipe(conn: sqlite3.Connection, recipe_id: int, recipe_name: str, firing_type: str, recipe_notes) -> dict:
     rows = conn.execute(
-        "SELECT m.canonical_name, ri.amount, m.match_confidence, m.bulk_price, m.bulk_unit, m.last_verified "
+        "SELECT m.canonical_name, ri.amount, m.match_confidence, m.bulk_price, m.bulk_unit, m.purchase_tier, "
+        "m.price_1lb, m.price_5lb, m.price_10lb, m.price_25lb, m.price_50lb, m.price_100lb, m.last_verified "
         "FROM recipe_ingredients ri JOIN materials m ON m.id = ri.material_id "
         "WHERE ri.recipe_id = ? ORDER BY ri.id",
         (recipe_id,),
@@ -71,13 +93,17 @@ def summarize_recipe(conn: sqlite3.Connection, recipe_id: int, recipe_name: str,
     verified_dates = []
     unresolved = []
 
-    for name, amount, match_confidence, bulk_price, bulk_unit, last_verified in rows:
+    for (
+        name, amount, match_confidence, bulk_price, bulk_unit, purchase_tier,
+        p1, p5, p10, p25, p50, p100, last_verified,
+    ) in rows:
         total_weight += amount
         if match_confidence == "not_found" or bulk_price is None or not bulk_unit:
             unresolved.append(name)
             continue
-        qty = parse_quantity(bulk_unit)
-        total_cost += amount * (bulk_price / qty)
+        tier_prices = {1: p1, 5: p5, 10: p10, 25: p25, 50: p50, 100: p100}
+        rate = select_rate(purchase_tier, bulk_price, bulk_unit, tier_prices)
+        total_cost += amount * rate
         if last_verified:
             verified_dates.append(last_verified)
 
@@ -140,7 +166,7 @@ def write_report(summaries: list[dict]) -> None:
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
-This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
+This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. Base-glaze materials (frits, feldspars, clays, silica) are costed at the cheapest bulk rate, since that's realistically how they're bought; colorants, opacifiers, and Lithium Carbonate are costed at a smaller 10lb rate instead, since those are typically bought in much smaller quantities than a full bag. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
 
 {(chr(10) * 2).join(sections)}
 

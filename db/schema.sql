@@ -18,6 +18,8 @@ CREATE TABLE materials (
     price_25lb REAL,
     price_50lb REAL,
     price_100lb REAL,
+    purchase_tier TEXT NOT NULL DEFAULT 'bulk'
+        CHECK (purchase_tier IN ('1lb', '5lb', '10lb', '25lb', '50lb', '100lb', 'bulk')),
     imco_url TEXT,
     match_confidence TEXT CHECK (match_confidence IN ('exact', 'fuzzy', 'not_found')),
     notes TEXT,

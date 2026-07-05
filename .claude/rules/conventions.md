@@ -71,6 +71,53 @@ for accurate costing — don't conflate the two.
 automatically on every refresh; it prints a warning when a tier gets
 approximated so you can decide whether the row's `notes` needs updating.
 
+## Purchase tier
+
+`materials.purchase_tier` (exported to `ingredients/ingredient_prices.csv`)
+says which cached tier column actually drives that material's cost in
+`scripts/price_batch.py` and `scripts/generate_price_summary.py` — it's an
+enum matching the tier columns above (`'1lb'`, `'5lb'`, `'10lb'`, `'25lb'`,
+`'50lb'`, `'100lb'`), plus a special value `'bulk'` meaning "use
+`bulk_price`/`bulk_unit` as before" (the cheapest true per-unit tier,
+regardless of size).
+
+**Why this exists:** `bulk_price` reflects the cheapest way to buy a
+material at *some* real quantity, but that quantity isn't always realistic.
+Confirmed by Jake, 2026-07-05: colorants, opacifiers, suspension aids
+(Copper Carbonate, the iron/copper/cobalt oxides and carbonates, Zircopax,
+Bentonite, CMC Gum, Tin Oxide, etc.) and Lithium Carbonate are actually
+bought in much smaller quantities — 5-10 lb at a time, not the 50lb+ bags
+that make up most materials' `bulk_price` tier. Pricing them at the bulk
+rate understated their real cost. A boolean "is this a small-batch
+material" flag was considered and rejected in favor of this tier-mapped
+enum, since some materials (not yet identified) may turn out to only be
+bought in 1lb increments — the field should be able to say that precisely
+rather than lump every non-bulk case into one rate.
+
+**Current defaults:** every base-glaze material (frits, feldspars, clays,
+silica) is `'bulk'` — unchanged from before this field existed. Every
+colorant/opacifier/suspension-aid material, plus Lithium Carbonate
+specifically (chemically a flux, but purchased like a colorant due to cost
+and small usage), is `'10lb'`. No material is currently `'1lb'` — that
+tier exists for a future case, not applied retroactively without evidence.
+
+**Impact when this was introduced (2026-07-05):** repricing every recipe
+against the new tiers raised every raku recipe containing a flagged
+material (all except Clear Crackle, which has none) — non-trivially in
+five cases where Lithium Carbonate or heavy colorant content dominates the
+batch: Bill's Neon Blue 2025 (+32%), Looks Expensive (+31%), Kelly's
+Lo-Fire Shino (+51%, driven by an unusually high 24%-by-weight Lithium
+Carbonate content), Forbes Midnight Blue (+20%), and Hasselle Copper Matte
+(+20%). Nothing decreased. See `.claude/CLAUDE.md`'s Open items for the
+full before/after table generated at the time.
+
+**How to apply going forward:** when adding a new material, default it to
+`'bulk'` unless there's a specific reason to think it's bought in smaller
+quantities (colorant, oxide, carbonate, or anything else added in small
+amounts relative to a recipe's base) — in which case set `'10lb'` the same
+way as the materials above, or ask if a different tier seems more
+realistic for that specific material.
+
 ## Recipes
 
 An accepted convention in writing glaze recipes is parts by weight normalized to 100-part. This 100-part is known as the "base glaze". 100-part is sometimes approximate (slight variations are not always calculation errors). Colorants & opacifiers are ingredients added (sometimes labled "add") on top of a 100-part base (base glaze ingredients).

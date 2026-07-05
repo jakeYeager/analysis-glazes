@@ -37,6 +37,7 @@ PRICES_HEADER = [
     "price_25lb",
     "price_50lb",
     "price_100lb",
+    "purchase_tier",
     "imco_url",
     "match_confidence",
     "notes",
@@ -63,7 +64,7 @@ def fmt_float(value) -> str:
 def export_materials(conn: sqlite3.Connection) -> None:
     rows = conn.execute(
         "SELECT canonical_name, price, unit, bulk_price, bulk_unit, price_1lb, price_5lb, "
-        "price_10lb, price_25lb, price_50lb, price_100lb, imco_url, match_confidence, notes, "
+        "price_10lb, price_25lb, price_50lb, price_100lb, purchase_tier, imco_url, match_confidence, notes, "
         "last_verified, glazy_material_url FROM materials ORDER BY id"
     ).fetchall()
 
@@ -73,7 +74,7 @@ def export_materials(conn: sqlite3.Connection) -> None:
         for row in rows:
             (
                 name, price, unit, bulk_price, bulk_unit, p1, p5, p10, p25, p50, p100,
-                imco_url, match_confidence, notes, last_verified, glazy_material_url,
+                purchase_tier, imco_url, match_confidence, notes, last_verified, glazy_material_url,
             ) = row
             writer.writerow(
                 [
@@ -88,6 +89,7 @@ def export_materials(conn: sqlite3.Connection) -> None:
                     fmt_float(p25),
                     fmt_float(p50),
                     fmt_float(p100),
+                    purchase_tier or "bulk",
                     imco_url or "",
                     match_confidence or "",
                     notes or "",

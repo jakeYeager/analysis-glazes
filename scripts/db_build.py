@@ -39,6 +39,7 @@ MATERIAL_COLUMNS = [
     "price_25lb",
     "price_50lb",
     "price_100lb",
+    "purchase_tier",
     "imco_url",
     "match_confidence",
     "notes",
@@ -61,6 +62,13 @@ def build_materials(conn: sqlite3.Connection) -> None:
             values["canonical_name"] = row["material_name"]
             for field in TIER_FLOAT_FIELDS:
                 values[field] = to_float_or_none(values[field])
+            # purchase_tier drives which cached tier column price_batch.py/
+            # generate_price_summary.py cost against -- 'bulk' (the default,
+            # cheapest true per-unit tier) for materials actually bought in
+            # bulk, or a specific tier (e.g. '10lb') for ones realistically
+            # purchased in smaller quantities (colorants, Lithium Carbonate).
+            # See "Purchase tier" in .claude/rules/conventions.md.
+            values["purchase_tier"] = values["purchase_tier"].strip() or "bulk"
             conn.execute(
                 f"INSERT INTO materials ({', '.join(MATERIAL_COLUMNS)}) "
                 f"VALUES ({', '.join('?' for _ in MATERIAL_COLUMNS)})",

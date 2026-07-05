@@ -81,6 +81,35 @@ def is_stale(last_verified: str | None) -> bool:
 # closest standard column.
 STANDARD_TIER_LBS = [1, 5, 10, 25, 50, 100]
 
+# materials.purchase_tier values that map to a cached price_Nlb column,
+# rather than 'bulk' (the cheapest true per-unit tier, e.g. a 50lb bag).
+TIER_LB_MAP = {"1lb": 1, "5lb": 5, "10lb": 10, "25lb": 25, "50lb": 50, "100lb": 100}
+
+
+def select_rate(material_name: str, purchase_tier: str, bulk_price: float, bulk_unit: str, tier_prices: dict) -> float:
+    """$/lb to actually cost this material at, honoring purchase_tier.
+
+    'bulk' (the default) uses the cheapest true per-unit tier, same as
+    before this field existed -- appropriate for base-glaze materials
+    (frits, feldspars, clays, silica) genuinely bought in bulk. A specific
+    tier (e.g. '10lb') costs against that cached column instead, since a
+    low-usage colorant or Lithium Carbonate is realistically purchased in
+    much smaller quantities than a 50lb bag. See "Purchase tier" in
+    .claude/rules/conventions.md."""
+    if purchase_tier == "bulk" or purchase_tier not in TIER_LB_MAP:
+        bulk_qty, _ = parse_quantity(bulk_unit)
+        return bulk_price / bulk_qty
+    tier_lb = TIER_LB_MAP[purchase_tier]
+    tier_price = tier_prices.get(tier_lb)
+    if tier_price is None:
+        print(
+            f"  {material_name}: purchase_tier={purchase_tier!r} but no cached price_{tier_lb}lb -- falling back to bulk rate",
+            file=sys.stderr,
+        )
+        bulk_qty, _ = parse_quantity(bulk_unit)
+        return bulk_price / bulk_qty
+    return tier_price / tier_lb
+
 
 def bucket_tiers(parsed: list[tuple[float, str, float]]) -> dict[int, tuple[float, float]]:
     """Map (qty, unit, price) tiers onto the closest standard column.
@@ -198,7 +227,9 @@ def main() -> None:
 
     rows = conn.execute(
         "SELECT m.id AS material_id, m.canonical_name AS material, m.imco_url, m.match_confidence, "
-        "m.bulk_price, m.bulk_unit, m.last_verified, ri.amount, r.glazy_url "
+        "m.bulk_price, m.bulk_unit, m.purchase_tier, "
+        "m.price_1lb, m.price_5lb, m.price_10lb, m.price_25lb, m.price_50lb, m.price_100lb, "
+        "m.last_verified, ri.amount, r.glazy_url "
         "FROM recipe_ingredients ri "
         "JOIN recipes r ON r.id = ri.recipe_id "
         "JOIN materials m ON m.id = ri.material_id "
@@ -223,31 +254,46 @@ def main() -> None:
             continue
 
         bulk_price, bulk_unit = row["bulk_price"], row["bulk_unit"]
+        purchase_tier = row["purchase_tier"] or "bulk"
+        tier_prices = {
+            1: row["price_1lb"], 5: row["price_5lb"], 10: row["price_10lb"],
+            25: row["price_25lb"], 50: row["price_50lb"], 100: row["price_100lb"],
+        }
         if is_stale(row["last_verified"]):
             print(f"{material}: stale (last_verified={row['last_verified'] or 'never'}) — refreshing")
             refreshed = refresh_material(conn, row["material_id"], material, row["imco_url"])
             if refreshed is None:
                 unresolved.append(material)
                 continue
-            bulk_price, bulk_unit = refreshed
+            # refresh_material() updated every tier column in place -- re-fetch
+            # so rate selection sees the fresh data, not the pre-refresh row.
+            updated = conn.execute(
+                "SELECT bulk_price, bulk_unit, price_1lb, price_5lb, price_10lb, price_25lb, price_50lb, price_100lb "
+                "FROM materials WHERE id = ?",
+                (row["material_id"],),
+            ).fetchone()
+            bulk_price, bulk_unit = updated[0], updated[1]
+            tier_prices = {1: updated[2], 5: updated[3], 10: updated[4], 25: updated[5], 50: updated[6], 100: updated[7]}
             status = "refreshed"
         else:
             status = "cached"
 
-        bulk_qty, _ = parse_quantity(bulk_unit)
-        rate = bulk_price / bulk_qty
+        rate = select_rate(material, purchase_tier, bulk_price, bulk_unit, tier_prices)
         cost = amount * rate
-        line_items.append({"material": material, "amount": amount, "rate": rate, "cost": cost, "status": status})
+        line_items.append(
+            {"material": material, "amount": amount, "rate": rate, "cost": cost, "status": status, "tier": purchase_tier}
+        )
 
     conn.close()
 
     print(f"\n{recipe_name} — itemized cost")
-    print(f"{'Material':<20}{'Amount':>10}{'$/lb':>10}{'Cost':>12}  Status")
+    print(f"{'Material':<20}{'Amount':>10}{'$/lb':>10}{'Cost':>12}  Tier   Status")
     total_cost = 0.0
     total_weight = 0.0
     for item in line_items:
         print(
-            f"{item['material']:<20}{item['amount']:>10.2f}{item['rate']:>10.2f}{item['cost']:>12.2f}  {item['status']}"
+            f"{item['material']:<20}{item['amount']:>10.2f}{item['rate']:>10.2f}{item['cost']:>12.2f}  "
+            f"{item['tier']:<6} {item['status']}"
         )
         total_cost += item["cost"]
         total_weight += item["amount"]
