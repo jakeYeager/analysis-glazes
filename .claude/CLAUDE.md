@@ -35,6 +35,16 @@ Fetches the recipe once and inserts `recipes`/`recipe_ingredients`/new `material
 
 **Watch for cross-recipe material duplicates** after importing: Glazy isn't consistent about material naming across recipes. The known case — a manufacturer prefix, e.g. "Ferro" — is caught automatically (`get_or_create_material()` checks whether stripping a prefix in `KNOWN_MANUFACTURER_PREFIXES` matches an existing material before creating a new row, and `find_material_candidates.py` tries the stripped name as an IMCO search term too). Anything not covered by that list will still create a second `materials` row — check for near-duplicate `canonical_name`s and merge by hand if needed (see "Material name variants" in `.claude/rules/conventions.md`). Never auto-merge an unconfirmed case.
 
+### Add a new recipe that isn't on Glazy yet
+
+```
+python3 scripts/import_csv_recipes.py <csv_path> --firing-type mid-fire|raku
+```
+
+For recipes sourced somewhere other than Glazy (e.g. a personal spreadsheet dropped in the gitignored `_inbox/` for review before porting in) that don't have a `glazy_url` yet. Expects a wide/pivoted CSV: first column is material name, one column per recipe, header row is the recipe name. Skips a column if a recipe with that name already exists — not meant for repeated re-import the way Glazy recipes are (no `--force`). `KNOWN_MATERIAL_ALIASES` maps a known exact-name synonym (e.g. `"EPK"` → `"EP Kaolin"`) to an existing material instead of creating a duplicate — same idea as `KNOWN_MANUFACTURER_PREFIXES`, just a full-name match rather than a prefix.
+
+**`is_addition` is defaulted to `false` for every ingredient imported this way**, since a flat spreadsheet has no equivalent of Glazy's "Total base recipe" subtotal marker to tell base ingredients from additions. Each such recipe's `notes` flags this explicitly. Once you manually add the recipe to Glazy, re-run `import_glazy_recipe.py <url> --force` on it to pick up the real base/addition split from the live page — don't leave the `false` default as the final word.
+
 ### Price a recipe
 
 ```
@@ -107,3 +117,6 @@ Confirmed live against Glazy and IMCO. Both are JS-rendered SPAs — data collec
 ## Open items
 
 - One material used in multiple recipes here (EP Kaolin) was found completely out of stock at the supplier as of the last price-collection run — worth rechecking before relying on any cost estimate that includes it.
+- **16 raku recipes bulk-imported from a personal spreadsheet (2026-07-04, via `scripts/import_csv_recipes.py`) have `is_addition=false` on every ingredient by default — not yet confirmed.** Each has a `notes` flag saying so. As each gets manually added to Glazy, re-run `import_glazy_recipe.py <url> --force` on it to pick up the real base/addition split. Until then, don't trust `is_addition` for: Clear Crackle, Fern Green Crackle, Sky Blue Crackle, Ferguson White Crackle, Marble White Crackle, Del Favero Luster, Metallic Turquoise, Ballingham Black Luster, Reynolds Wrap, Copper Sand, Emerald Green Copper Flash, Post Pac Man, Forbes Midnight Blue, Bill's Neon Blue 2024, Blue Moon, Kelly's Lo-Fire Shino.
+- That same import added 14 new, still-unpriced materials (`match_confidence='not_found'`): Bone Ash, Custer Feldspar, Ball Clay, Barium Carbonate, Zinc Oxide, Zircopax, Chrome Oxide, Cobalt Carbonate, Cobalt Oxide, Black Copper Oxide, Black Iron Oxide, Frit 3110, Rutile, Manganese Dioxide. Run `price_batch.py` on each new recipe to trigger `find_material_candidates.py` for these.
+- "Bill's Neon Blue 2024" (from that same import) is closely related to but distinct from "Looks Expensive" — Glazy's page for "Looks Expensive" already says it's a *"Revision of Bill's Neon Blue 2025,"* so the "2024" spreadsheet version is very likely the prior iteration, not a duplicate. Both are tracked separately; worth confirming that relationship once "Bill's Neon Blue 2024" (or a later revision of it) is added to Glazy.

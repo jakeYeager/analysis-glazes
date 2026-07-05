@@ -33,6 +33,15 @@ This is a *confirmed* class of name variant, not a guess — still mark the
 resulting match `fuzzy` rather than `exact` (per the never-fabricate rule),
 since it's inferred equivalence, not a literal string match.
 
+Another confirmed case: **abbreviations for the same product.** `"EPK"` and
+`"EP Kaolin"` are the same material (Edgar Plastic Kaolin) — confirmed when
+a raku-glaze spreadsheet import used `"EPK"` for a material already tracked
+as `"EP Kaolin"`. Tracked in `KNOWN_MATERIAL_ALIASES` in
+`scripts/import_csv_recipes.py` (and worth adding to `import_glazy_recipe.py`
+if a Glazy page ever uses the abbreviation directly). Unlike the
+manufacturer-prefix case, this is a straight rename, not a fuzzy inference —
+mark it `exact` once priced.
+
 ## Ingredient price tiers
 
 `materials` (in `db/glazes.db`, exported to `ingredients/ingredient_prices.csv`)
