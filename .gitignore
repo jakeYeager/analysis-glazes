@@ -2,3 +2,4 @@
 db/*.db
 reports/pdfs/
 _inbox/
+__pycache__/

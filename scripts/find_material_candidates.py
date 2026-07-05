@@ -4,6 +4,7 @@ alternate-name list.
 
 Usage:
     uv run --with playwright scripts/find_material_candidates.py <recipe_glazy_url> "<material name>"
+    uv run --with playwright scripts/find_material_candidates.py "" "<material name>"
 
 For a material whose materials row is `fuzzy` or `not_found`, this finds that
 material's Glazy detail page (by following the link matching <material name>
@@ -13,6 +14,13 @@ into db/glazes.db's name_candidates_log table for manual review. This
 script never writes to the materials table itself: per this project's
 "never fabricate a price" rule, a human confirms any fuzzy match before it
 becomes real data.
+
+Pass "" for <recipe_glazy_url> when the recipe doesn't have one yet (e.g.
+bulk-imported via import_csv_recipes.py, not yet manually added to Glazy) —
+skips the Glazy alt-names crawl entirely and searches IMCO directly with
+just the material name (plus a manufacturer-prefix-stripped variant, same
+as always). Fewer candidate terms tried, but still useful for materials
+with a plain, unbranded name.
 
 Confirmed live against glazy.org/materials/15458 (Wollastonite) and IMCO
 search: Glazy has no literal "alternate names" section — the closest
@@ -144,13 +152,18 @@ def main() -> None:
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        try:
-            material_url = find_material_glazy_url(page, recipe_url, material_name)
-            alt_names = scrape_alt_names(page, material_url)
-        except Exception as exc:
-            print(f"error finding alt names for '{material_name}': {exc}", file=sys.stderr)
-            browser.close()
-            sys.exit(1)
+        material_url = None
+        alt_names = []
+        if recipe_url:
+            try:
+                material_url = find_material_glazy_url(page, recipe_url, material_name)
+                alt_names = scrape_alt_names(page, material_url)
+            except Exception as exc:
+                print(f"error finding alt names for '{material_name}': {exc}", file=sys.stderr)
+                browser.close()
+                sys.exit(1)
+        else:
+            print(f"  no recipe_glazy_url -- searching IMCO directly for '{material_name}'", file=sys.stderr)
 
         stripped = strip_known_prefix(material_name)
         terms_to_try = [material_name] + ([stripped] if stripped else []) + alt_names

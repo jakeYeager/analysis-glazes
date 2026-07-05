@@ -114,7 +114,14 @@ def refresh_material(conn: sqlite3.Connection, material_id: int, material_name: 
     for tier in tiers:
         if tier["price"] is None:
             continue
-        qty, unit = parse_quantity(tier["label"])
+        try:
+            qty, unit = parse_quantity(tier["label"])
+        except ValueError:
+            # Some IMCO products have a non-quantity option in the same
+            # <select> (seen live: a bare "Oz" tier with no leading number,
+            # on Cobalt Carbonate) -- skip it rather than crash the refresh.
+            print(f"  {material_name}: skipping unparseable tier {tier['label']!r}", file=sys.stderr)
+            continue
         if qty < 1:
             continue  # sub-1lb tiers aren't tracked, see STANDARD_TIER_LBS comment
         parsed.append((qty, unit, parse_price(tier["price"])))
@@ -169,11 +176,10 @@ def refresh_material(conn: sqlite3.Connection, material_id: int, material_name: 
 
 
 def log_candidates(recipe_glazy_url: str | None, material_name: str) -> None:
-    if not recipe_glazy_url:
-        print(f"  no glazy_url on this recipe — can't look up candidates for {material_name}", file=sys.stderr)
-        return
+    # find_material_candidates.py treats "" as "no Glazy page to crawl --
+    # search IMCO directly by name" rather than skipping outright.
     subprocess.run(
-        ["uv", "run", "--with", "playwright", "scripts/find_material_candidates.py", recipe_glazy_url, material_name],
+        ["uv", "run", "--with", "playwright", "scripts/find_material_candidates.py", recipe_glazy_url or "", material_name],
         cwd=REPO_ROOT,
     )
 

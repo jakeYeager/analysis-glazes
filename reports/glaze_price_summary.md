@@ -21,7 +21,23 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 
 | Glaze | $/lb | Batch Weight (lb) | Total Cost | Last Priced | Notes |
 |---|---|---|---|---|---|
+| Ballingham Black Luster | $4.70 | 133.50 | $627.07 | 2026-07-04 | 1 ingredient(s) unpriced -- total may be understated |
+| Bill's Neon Blue 2024 | $4.53 | 109.00 | $493.97 | 2026-07-04 |  |
+| Blue Moon | $7.03 | 102.00 | $717.27 | 2026-07-04 |  |
+| Clear Crackle | $3.73 | 100.00 | $372.80 | 2026-07-04 |  |
+| Copper Sand | $5.84 | 115.75 | $676.00 | 2026-07-04 |  |
+| Del Favero Luster | $3.89 | 102.00 | $396.80 | 2026-07-04 |  |
+| Emerald Green Copper Flash | $3.43 | 109.00 | $373.80 | 2026-07-04 |  |
+| Ferguson White Crackle | $6.06 | 100.00 | $606.30 | 2026-07-04 |  |
+| Fern Green Crackle | $3.78 | 100.50 | $379.70 | 2026-07-04 |  |
+| Forbes Midnight Blue | $4.39 | 109.00 | $478.15 | 2026-07-04 |  |
+| Kelly's Lo-Fire Shino | $6.69 | 106.34 | $710.90 | 2026-07-04 |  |
 | Looks Expensive | $4.63 | 106.30 | $492.57 | 2026-07-04 |  |
+| Marble White Crackle | $4.72 | 110.00 | $519.20 | 2026-07-04 |  |
+| Metallic Turquoise | $4.34 | 108.00 | $468.80 | 2026-07-04 |  |
+| Post Pac Man | $5.02 | 114.70 | $575.75 | 2026-07-04 |  |
+| Reynolds Wrap | $4.08 | 114.00 | $465.26 | 2026-07-04 |  |
+| Sky Blue Crackle | $3.85 | 100.50 | $386.80 | 2026-07-04 |  |
 
 ## Source files referenced
 
