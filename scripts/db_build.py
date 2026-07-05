@@ -8,16 +8,10 @@ Run this whenever db/glazes.db doesn't exist yet (fresh clone, new session)
 or you want to discard local DB state and rebuild from the last committed
 CSV checkpoint. Idempotent: drops and recreates every table each run, so
 it's always safe to re-run — db/glazes.db is a disposable working copy, not
-the source of truth. The source of truth is the three CSVs this reads:
-recipes/compare_recipes.csv, ingredients/ingredient_prices.csv,
-ingredients/name_candidates_log.csv. Run scripts/db_export.py to flush DB
-state back to those CSVs before committing.
-
-recipes/compare_recipes.csv doesn't yet track firing_type (mid-fire vs.
-raku) — FIRING_TYPE_OVERRIDES below fills that in for recipes known when
-this script was written. New recipes without an override default to
-mid-fire with a warning; correct firing_type by hand in the DB (and flush it
-back with db_export.py) until compare_recipes.csv tracks it directly.
+the source of truth. The source of truth is the four CSVs this reads:
+recipes/recipe_metadata.csv, recipes/compare_recipes.csv,
+ingredients/ingredient_prices.csv, ingredients/name_candidates_log.csv. Run
+scripts/db_export.py to flush DB state back to those CSVs before committing.
 """
 
 import csv
@@ -28,17 +22,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parent.parent
 SCHEMA_SQL = REPO_ROOT / "db" / "schema.sql"
 DB_PATH = REPO_ROOT / "db" / "glazes.db"
+METADATA_CSV = REPO_ROOT / "recipes" / "recipe_metadata.csv"
 RECIPES_CSV = REPO_ROOT / "recipes" / "compare_recipes.csv"
 PRICES_CSV = REPO_ROOT / "ingredients" / "ingredient_prices.csv"
 CANDIDATES_CSV = REPO_ROOT / "ingredients" / "name_candidates_log.csv"
-
-# Cone 5-6 rules out raku (per docs/price_list_run_notes.md) -- both
-# existing recipes are mid-fire. Add entries here for any recipe whose
-# firing_type isn't obvious, until compare_recipes.csv tracks it directly.
-FIRING_TYPE_OVERRIDES = {
-    "Frogskin": "mid-fire",
-    "Giggin' for Salvation": "mid-fire",
-}
 
 MATERIAL_COLUMNS = [
     "canonical_name",
@@ -82,23 +69,29 @@ def build_materials(conn: sqlite3.Connection) -> None:
 
 
 def build_recipes_and_ingredients(conn: sqlite3.Connection) -> None:
-    with open(RECIPES_CSV, newline="") as f:
-        rows = list(csv.DictReader(f))
+    with open(METADATA_CSV, newline="") as f:
+        metadata_rows = list(csv.DictReader(f))
 
     recipe_ids: dict[str, int] = {}
-    for row in rows:
-        name = row["recipe"]
-        if name in recipe_ids:
-            continue
-        firing_type = FIRING_TYPE_OVERRIDES.get(name)
-        if firing_type is None:
-            print(f"warning: no firing_type override for '{name}', defaulting to mid-fire", file=sys.stderr)
-            firing_type = "mid-fire"
+    for row in metadata_rows:
         cursor = conn.execute(
-            "INSERT INTO recipes (name, glazy_url, firing_type) VALUES (?, ?, ?)",
-            (name, row["glazy_url"] or None, firing_type),
+            "INSERT INTO recipes (name, glazy_url, firing_type, cone, atmosphere, status, imported_date, notes) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                row["name"],
+                row["glazy_url"] or None,
+                row["firing_type"] or None,
+                row["cone"] or None,
+                row["atmosphere"] or None,
+                row["status"] or None,
+                row["imported_date"] or None,
+                row["notes"] or None,
+            ),
         )
-        recipe_ids[name] = cursor.lastrowid
+        recipe_ids[row["name"]] = cursor.lastrowid
+
+    with open(RECIPES_CSV, newline="") as f:
+        rows = list(csv.DictReader(f))
 
     material_ids = {
         row[0]: row[1]
@@ -106,6 +99,10 @@ def build_recipes_and_ingredients(conn: sqlite3.Connection) -> None:
     }
 
     for row in rows:
+        name = row["recipe"]
+        if name not in recipe_ids:
+            print(f"warning: '{name}' has ingredient rows but no entry in {METADATA_CSV}, skipping", file=sys.stderr)
+            continue
         material = row["material"]
         if material not in material_ids:
             print(f"warning: '{material}' not found in materials, skipping ingredient row", file=sys.stderr)

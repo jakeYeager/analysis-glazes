@@ -17,16 +17,20 @@ other unpriced material. This is the actual fix for ingesting ~50 recipes
 without 50 agent browsing sessions: each recipe becomes one idempotent
 script call.
 
-Confirmed live against glazy.org/recipes/292795 (Frogskin): recipe
+Confirmed live against glazy.org/recipes/292795 (Frogskin, no additions) and
+glazy.org/recipes/631749 (a raku recipe with additions): recipe
 name/cone/atmosphere/status are each a "Label" line followed by a value line
 in the page's rendered text; the ingredient table is the first <table> on
 the page, one row per material (name links to /materials/<id>, captured
-here as glazy_material_url), with a trailing "Total" row skipped. Additions
-(colorants/opacifiers layered on a 100-part base, see
-.claude/rules/conventions.md) are assumed to render as a "+"-prefixed
-amount when present — not confirmed live, since Frogskin's own recipe is
-base-only and doesn't have any. Spot-check is_addition against a recipe
-that actually has additions before trusting a bulk import.
+here as glazy_material_url). Additions (colorants/opacifiers layered on a
+100-part base, see .claude/rules/conventions.md) are NOT "+"-prefixed
+amounts as originally assumed — Glazy instead inserts a "Total base recipe"
+subtotal row after the 100-part base, and every ingredient row after it
+(before the final "Total" row) is an addition. A recipe with no additions
+just goes straight to "Total" with no subtotal row at all (Frogskin's case).
+
+firing_type is auto-detected from the "Atmospheres" field (e.g. "Raku,
+Reduction" -> raku) unless --firing-type is passed explicitly to override.
 """
 
 import argparse
@@ -67,13 +71,17 @@ def parse_ingredients(page) -> list[dict]:
         })"""
     )
     ingredients = []
+    is_addition = False
     for row in rows:
         label = row["label"]
-        if label in ("", "Material", "Total"):
+        if label in ("", "Material"):
             continue
-        amount_text = row["amount"]
-        is_addition = amount_text.startswith("+")
-        amount = float(amount_text.lstrip("+").strip())
+        if label.lower().startswith("total base"):
+            is_addition = True  # everything from here on is layered on top of the 100-part base
+            continue
+        if label.lower() == "total":
+            break  # grand-total row marks the end of the ingredient table
+        amount = float(row["amount"].strip())
         glazy_material_url = ("https://glazy.org" + row["href"]) if row["href"] else None
         ingredients.append(
             {
@@ -105,7 +113,12 @@ def get_or_create_material(conn: sqlite3.Connection, name: str, glazy_material_u
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("glazy_url")
-    parser.add_argument("--firing-type", choices=["mid-fire", "raku"], default="mid-fire")
+    parser.add_argument(
+        "--firing-type",
+        choices=["mid-fire", "raku"],
+        default=None,
+        help="override auto-detection (default: 'raku' if the Atmospheres field mentions raku, else 'mid-fire')",
+    )
     parser.add_argument("--force", action="store_true", help="re-import even if this glazy_url is already in recipes")
     args = parser.parse_args()
 
@@ -133,13 +146,18 @@ def main() -> None:
         ingredients = parse_ingredients(page)
         browser.close()
 
+    firing_type = args.firing_type
+    if firing_type is None:
+        atmosphere = metadata["atmosphere"] or ""
+        firing_type = "raku" if "raku" in atmosphere.lower() else "mid-fire"
+
     cursor = conn.execute(
         "INSERT INTO recipes (name, glazy_url, firing_type, cone, atmosphere, status, imported_date) "
         "VALUES (?, ?, ?, ?, ?, ?, ?)",
         (
             metadata["name"],
             args.glazy_url,
-            args.firing_type,
+            firing_type,
             metadata["cone"],
             metadata["atmosphere"],
             metadata["status"],
