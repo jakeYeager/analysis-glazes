@@ -77,6 +77,10 @@ An accepted convention in writing glaze recipes is parts by weight normalized to
 
 **"To taste" application ingredients aren't chemistry — don't treat their amount as a data-quality signal.** CMC Gum (confirmed by Jake, 2026-07-04) is added purely to improve brushability/application, not for its fired chemistry, so its quantity is routinely adjusted batch to batch and isn't governed by the same precision as fluxes, colorants, or opacifiers. When a source disagrees with Glazy (or another source) on a CMC Gum amount, that's expected variance, not a transcription error worth flagging the way a flux or colorant discrepancy would be. Bentonite (a suspension aid, also often added "to taste") is plausibly similar, but that hasn't been explicitly confirmed the way CMC Gum has — don't assume it without asking.
 
+**`$/lb` reflects mixing cost, not real per-piece cost — application thickness matters and isn't tracked here.** Confirmed by Jake, 2026-07-04, re: "Hasselle Copper Matte" ($11.43/lb, ~80% Black Copper Oxide): that recipe is deliberately applied as a very thin coat — just enough clay to make the copper stick — so its actual cost per piece is far below what the $/lb figure alone suggests. A thin-coat glaze and a thick-dipped glaze at the same $/lb do not cost the same per piece. Don't rank or compare recipes by `$/lb` alone as a proxy for "cost to use" without knowing application method; flag this caveat when a recipe's notes mention thin/thick application, and ask if it's unclear.
+
+When a recipe has this kind of caveat, prefix its `recipes.notes` with `STAKEHOLDER NOTE` (see `scripts/generate_price_summary.py`'s `STAKEHOLDER_NOTE_PREFIX`) so the price summary surfaces a "see notes" flag in its table. Plain provenance notes (e.g. the bulk-import `is_addition` disclosure) should *not* use this prefix — they're not relevant to interpreting `$/lb` and would just be noise in the stakeholder report if flagged the same way.
+
 ## New reports
 
 After the title, make a short framing paragraph explaining why the doc exists, tables over prose for numbers, and a "Source files referenced" list at the bottom.

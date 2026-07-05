@@ -36,6 +36,7 @@ CSV_HEADER = [
     "price_per_lb",
     "oldest_last_verified",
     "unresolved_materials",
+    "notes",
 ]
 
 # Same quantity-parsing shape as scripts/price_batch.py's parse_quantity(),
@@ -57,7 +58,7 @@ def parse_quantity(label: str):
     return float(num_str)
 
 
-def summarize_recipe(conn: sqlite3.Connection, recipe_id: int, recipe_name: str, firing_type: str) -> dict:
+def summarize_recipe(conn: sqlite3.Connection, recipe_id: int, recipe_name: str, firing_type: str, recipe_notes) -> dict:
     rows = conn.execute(
         "SELECT m.canonical_name, ri.amount, m.match_confidence, m.bulk_price, m.bulk_unit, m.last_verified "
         "FROM recipe_ingredients ri JOIN materials m ON m.id = ri.material_id "
@@ -88,7 +89,11 @@ def summarize_recipe(conn: sqlite3.Connection, recipe_id: int, recipe_name: str,
         "price_per_lb": (total_cost / total_weight) if total_weight else None,
         "oldest_priced": min(verified_dates) if verified_dates else None,
         "unresolved": unresolved,
+        "recipe_notes": recipe_notes,
     }
+
+
+STAKEHOLDER_NOTE_PREFIX = "STAKEHOLDER NOTE"
 
 
 def render_table(rows: list[dict]) -> str:
@@ -98,11 +103,12 @@ def render_table(rows: list[dict]) -> str:
     ]
     for r in rows:
         price = f"${r['price_per_lb']:.2f}" if r["price_per_lb"] is not None else "—"
-        notes = (
-            f"{len(r['unresolved'])} ingredient(s) unpriced -- total may be understated"
-            if r["unresolved"]
-            else ""
-        )
+        note_parts = []
+        if r["unresolved"]:
+            note_parts.append(f"{len(r['unresolved'])} ingredient(s) unpriced -- total may be understated")
+        if r["recipe_notes"] and r["recipe_notes"].startswith(STAKEHOLDER_NOTE_PREFIX):
+            note_parts.append("see notes (db/glazes.db) -- affects how to read this $/lb figure")
+        notes = "; ".join(note_parts)
         lines.append(
             f"| {r['recipe']} | {price} | {r['total_weight']:.2f} | ${r['total_cost']:.2f} | "
             f"{r['oldest_priced'] or '—'} | {notes} |"
@@ -130,7 +136,7 @@ def write_report(summaries: list[dict]) -> None:
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
-This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete.
+This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
 
 {(chr(10) * 2).join(sections)}
 
@@ -156,6 +162,7 @@ def write_csv(summaries: list[dict]) -> None:
                     f"{s['price_per_lb']:.2f}" if s["price_per_lb"] is not None else "",
                     s["oldest_priced"] or "",
                     "; ".join(s["unresolved"]),
+                    s["recipe_notes"] or "",
                 ]
             )
 
@@ -165,8 +172,8 @@ def main() -> None:
         raise SystemExit(f"{DB_PATH} doesn't exist -- run scripts/db_build.py first")
 
     conn = sqlite3.connect(DB_PATH)
-    recipes = conn.execute("SELECT id, name, firing_type FROM recipes ORDER BY firing_type, name").fetchall()
-    summaries = [summarize_recipe(conn, rid, name, firing_type) for rid, name, firing_type in recipes]
+    recipes = conn.execute("SELECT id, name, firing_type, notes FROM recipes ORDER BY firing_type, name").fetchall()
+    summaries = [summarize_recipe(conn, rid, name, firing_type, notes) for rid, name, firing_type, notes in recipes]
     conn.close()
 
     write_report(summaries)

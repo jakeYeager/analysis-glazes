@@ -8,7 +8,7 @@
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
-This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete.
+This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`, regenerated directly from it via `scripts/generate_price_summary.py` — a quick reference for pricing/rotation decisions, not a one-off analysis. Regenerate it (and re-run `scripts/price_batch.py` first if you want fresher prices) before sharing an updated copy with stakeholders. "Last Priced" is the oldest `last_verified` date among a recipe's ingredients — the number is only as fresh as its stalest ingredient. A recipe with unpriced ingredients shows its total computed from confirmed ingredients only; it is not a guess, but it is incomplete. **`$/lb` is mixing cost, not per-piece cost** — it says nothing about how thickly a glaze gets applied, so a thin-coat glaze and a thick-dipped one at the same `$/lb` do not cost the same to actually use. A recipe flagged "see notes" below has a specific caveat about this worth reading before comparing it to others on `$/lb` alone.
 
 ## Mid Fire glazes
 
@@ -31,7 +31,7 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 | Ferguson White Crackle | $6.06 | 100.00 | $606.30 | 2026-07-04 |  |
 | Fern Green Crackle | $3.78 | 100.50 | $379.70 | 2026-07-04 |  |
 | Forbes Midnight Blue | $4.39 | 109.00 | $478.15 | 2026-07-04 |  |
-| Hasselle Copper Matte | $11.43 | 103.00 | $1176.81 | 2026-07-04 |  |
+| Hasselle Copper Matte | $11.43 | 103.00 | $1176.81 | 2026-07-04 | see notes (db/glazes.db) -- affects how to read this $/lb figure |
 | Kelly's Lo-Fire Shino | $6.69 | 106.34 | $710.90 | 2026-07-04 |  |
 | Looks Expensive | $4.63 | 106.30 | $492.57 | 2026-07-04 |  |
 | Marble White Crackle | $4.72 | 110.00 | $519.20 | 2026-07-04 |  |
