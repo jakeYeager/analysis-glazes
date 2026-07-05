@@ -15,5 +15,9 @@ Recipes, materials, and prices live in `db/glazes.db` (SQLite, gitignored — re
 
 ## Source systems
 
-- **[Glazy](https://glazy.org)** — public community site for recording and sharing glaze recipes. Read-only, no login needed, no export/API found so far — recipes are transcribed by hand or read directly off the page.
+- **[Glazy](https://glazy.org)** — public community site for recording and sharing glaze recipes. Read-only, no login needed for published recipes, no export/API found so far — recipes are transcribed by hand or read directly off the page. Unpublished recipes are gated behind the owner's login session (`import_glazy_recipe.py`'s headless fetch returns "Recipe does not exist" for one) — those need a logged-in browser session to view/collect instead.
 - **IMCO** (a ceramics raw-materials supplier) — runs on **Square Online**. No public product/pricing API either way, so pricing comes from the on-site search + product pages.
+
+## Reference materials (not scraped/imported, background only)
+
+- [**"15 Raku Glazes"** (Ceramic Arts Network)](https://ceramicartsnetwork.org/docs/default-source/uploadedfiles/wp-content/uploads/2015/08/15rakuglazes.pdf?sfvrsn=992b3959_0) — noted 2026-07-05. Published/popular versions of several raku glazes; useful as a comparison point when a studio recipe (e.g. a personal unpublished Glazy variant) deviates from the well-known published version and might warrant tracking as two separate recipes rather than one.
