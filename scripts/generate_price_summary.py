@@ -178,7 +178,7 @@ def write_report(summaries: list[dict]) -> None:
 |---|---|
 | **Date** | {today} |
 | **Last Updated** | {today} |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 

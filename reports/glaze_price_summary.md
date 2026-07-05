@@ -4,7 +4,7 @@
 |---|---|
 | **Date** | 2026-07-05 |
 | **Last Updated** | 2026-07-05 |
-| **Document Version** | 1.0 |
+| **Document Version** | 2.0 |
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
