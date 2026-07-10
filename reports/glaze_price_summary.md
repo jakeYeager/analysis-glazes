@@ -2,9 +2,9 @@
 
 | | |
 |---|---|
-| **Date** | 2026-07-05 |
-| **Last Updated** | 2026-07-05 |
-| **Document Version** | 2.0 |
+| **Date** | 2026-07-10 |
+| **Last Updated** | 2026-07-10 |
+| **Document Version** | 2.1 |
 | **Generation Model** | Claude Sonnet 5 |
 | **Author** | Jake Yeager |
 
@@ -14,6 +14,8 @@ This is the current per-lb cost of every glaze recipe tracked in `db/glazes.db`,
 
 | Glaze | $/lb | Batch Weight (lb) | Total Cost | Last Priced | Notes |
 |---|---|---|---|---|---|
+| Buttercup Yellow | $3.63 | 114.00 | $413.34 | 2026-07-04 |  |
+| Falls Creek Shino | $5.89 | 106.70 | $628.42 | 2026-07-04 |  |
 | Frogskin | $2.40 | 107.00 | $257.22 | 2026-07-04 |  |
 | Giggin' for Salvation | $2.47 | 115.50 | $285.57 | 2026-07-04 |  |
 
